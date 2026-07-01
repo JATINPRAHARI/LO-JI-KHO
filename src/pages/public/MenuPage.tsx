@@ -5,6 +5,7 @@ import { ShoppingCart, Leaf, ChevronRight, Award, Truck, Heart, Sparkles } from 
 import { useCart } from '../../contexts/CartContext';
 import { getCategories, getMenuItems } from '../../services/menu';
 import type { MenuItem } from '../../types/database';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 interface CategoryDisplay {
   id: string;

@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import { validateCoupon } from '../../services/offers';
 import { getAddresses } from '../../services/addresses';
 import { Input } from '../../components/ui/Input';

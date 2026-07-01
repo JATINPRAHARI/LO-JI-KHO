@@ -8,6 +8,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { OrderCardSkeleton } from '../../components/ui/Skeleton';
 import { Button } from '../../components/ui/Button';
 import { formatDate } from '../../utils/formatters';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function OrdersPage() {
   const { data: orders, isLoading } = useQuery({ queryKey: ['my-orders'], queryFn: getMyOrders });

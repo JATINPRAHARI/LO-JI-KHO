@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { updateProfile } from '../../services/auth';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),

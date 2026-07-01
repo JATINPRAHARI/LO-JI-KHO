@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import { signIn } from '../../services/auth';
 import { supabase } from '../../lib/supabase';
 

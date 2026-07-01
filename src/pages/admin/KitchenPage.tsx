@@ -8,6 +8,7 @@ import { getAllOrders, updateOrderStatus, verifyPayment } from '../../services/o
 import { Button } from '../../components/ui/Button';
 import { formatDate } from '../../utils/formatters';
 import type { Order, OrderStatus } from '../../types/database';
+import { usePageTitle } from '../../../hooks/usePageTitle';
 
 const KITCHEN_STATUSES: OrderStatus[] = ['waiting_verification', 'accepted', 'preparing', 'ready', 'out_for_delivery'];
 

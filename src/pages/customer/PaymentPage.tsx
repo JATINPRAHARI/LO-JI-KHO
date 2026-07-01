@@ -10,6 +10,7 @@ import { getAllSettings } from '../../services/settings';
 import { Button } from '../../components/ui/Button';
 import { OrderStatusBadge } from '../../components/common/OrderStatusBadge';
 import { iconForItem } from '../../utils/iconForItem';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import type { Order } from '../../types/database';
 
 const ORDER_STEPS = [

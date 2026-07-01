@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import { resetPassword } from '../../services/auth';
 
 const schema = z.object({ email: z.string().email('Enter a valid email') });

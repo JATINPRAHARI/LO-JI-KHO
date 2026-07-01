@@ -8,6 +8,7 @@ import { getFavorites } from '../../services/favorites';
 import { OrderStatusBadge } from '../../components/common/OrderStatusBadge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { OrderCardSkeleton } from '../../components/ui/Skeleton';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import { Button } from '../../components/ui/Button';
 import { formatDate } from '../../utils/formatters';
 import { iconForItem } from '../../utils/iconForItem';

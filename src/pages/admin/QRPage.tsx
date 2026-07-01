@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabase';
 import { getAllSettings, updateSetting } from '../../services/settings';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const schema = z.object({
   upi_id: z.string().min(5, 'UPI ID required').regex(/^[\w.-]+@[\w]+$/, 'Invalid UPI ID format'),

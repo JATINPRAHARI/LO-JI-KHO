@@ -14,6 +14,7 @@ import { Select } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
 import type { MenuItem } from '../../types/database';
+import { usePageTitle } from '../../../hooks/usePageTitle';
 
 const schema = z.object({
   name: z.string().min(2, 'Name required'),

@@ -8,6 +8,7 @@ import { getFeaturedItems, getActiveOffers, getCategories } from '../../services
 import { useCart } from '../../contexts/CartContext';
 import { MenuItemSkeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import { Button } from '../../components/ui/Button';
 import type { MenuItem } from '../../types/database';
 

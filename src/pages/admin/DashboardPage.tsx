@@ -5,6 +5,7 @@ import { getTodayStats, getAllOrders } from '../../services/orders';
 import { OrderStatusBadge } from '../../components/common/OrderStatusBadge';
 import { formatDate } from '../../utils/formatters';
 import type { OrderStatus } from '../../types/database';
+import { usePageTitle } from '../../../hooks/usePageTitle';
 
 export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useQuery({ queryKey: ['today-stats'], queryFn: getTodayStats });

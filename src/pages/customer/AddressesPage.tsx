@@ -10,6 +10,7 @@ import { getAddresses, createAddress, deleteAddress, setDefaultAddress } from '.
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { Button } from '../../components/ui/Button';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 

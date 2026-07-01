@@ -14,6 +14,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
 import { formatDate } from '../../utils/formatters';
 import type { Offer } from '../../types/database';
+import { usePageTitle } from '../../../hooks/usePageTitle';
 
 const schema = z.object({
   code: z.string().min(3, 'Code required').max(15, 'Code too long'),

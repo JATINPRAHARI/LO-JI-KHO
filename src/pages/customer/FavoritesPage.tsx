@@ -8,6 +8,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { Button } from '../../components/ui/Button';
 import { iconForItem } from '../../utils/iconForItem';
 import { useCart } from '../../contexts/CartContext';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function FavoritesPage() {
   const { data: favorites, isLoading } = useQuery({ queryKey: ['favorites'], queryFn: getFavorites });

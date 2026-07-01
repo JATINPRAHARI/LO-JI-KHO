@@ -8,6 +8,7 @@ import { OrderStatusBadge } from '../../components/common/OrderStatusBadge';
 import { Button } from '../../components/ui/Button';
 import { formatDate } from '../../utils/formatters';
 import type { Order, OrderStatus } from '../../types/database';
+import { usePageTitle } from '../../../hooks/usePageTitle';
 
 const STATUS_FILTERS: { value: OrderStatus | 'all'; label: string; color: string }[] = [
   { value: 'all', label: 'All Orders', color: 'bg-stone-100 text-stone-700' },
