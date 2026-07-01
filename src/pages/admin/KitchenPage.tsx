@@ -1,16 +1,16 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, X, ChefHat, Clock, Package, Truck, RefreshCw } from 'lucide-react';
+import { Check, ChefHat, Package, Truck, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
-import { getAllOrders, updateOrderStatus, verifyPayment } from '../../services/orders';
+import { getAllOrders, updateOrderStatus } from '../../services/orders';
 import { Button } from '../../components/ui/Button';
 import { formatDate } from '../../utils/formatters';
 import type { Order, OrderStatus } from '../../types/database';
 import { usePageTitle } from '../../../hooks/usePageTitle';
 
-const KITCHEN_STATUSES: OrderStatus[] = ['waiting_verification', 'accepted', 'preparing', 'ready', 'out_for_delivery'];
+const KITCHEN_STATUSES: OrderStatus[] = ['accepted', 'preparing', 'ready', 'out_for_delivery'];
 
 export default function KitchenPage() {
   const queryClient = useQueryClient();
@@ -22,7 +22,6 @@ export default function KitchenPage() {
 
   const kitchenOrders = orders?.filter(o => KITCHEN_STATUSES.includes(o.status as OrderStatus));
   const grouped = {
-    waiting_verification: kitchenOrders?.filter(o => o.status === 'waiting_verification') ?? [],
     accepted: kitchenOrders?.filter(o => o.status === 'accepted') ?? [],
     preparing: kitchenOrders?.filter(o => o.status === 'preparing') ?? [],
     ready: kitchenOrders?.filter(o => o.status === 'ready') ?? [],
@@ -36,15 +35,6 @@ export default function KitchenPage() {
       toast.success('Order updated');
     },
     onError: () => toast.error('Failed to update'),
-  });
-
-  const verifyMutation = useMutation({
-    mutationFn: (id: string) => verifyPayment(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['kitchen-orders'] });
-      toast.success('Payment verified');
-    },
-    onError: () => toast.error('Failed to verify'),
   });
 
   useEffect(() => {
@@ -78,22 +68,6 @@ export default function KitchenPage() {
       ) : (
         <div className="overflow-x-auto pb-4">
           <div className="flex gap-4 min-w-max">
-            <KanbanColumn
-              title="Verify Payment"
-              icon={<Clock size={16} />}
-              orders={grouped.waiting_verification}
-              color="blue"
-              actions={order => (
-                <div className="flex gap-2">
-                  <Button size="sm" leftIcon={<Check size={12} />} onClick={() => verifyMutation.mutate(order.id)} isLoading={verifyMutation.isPending}>
-                    Verify
-                  </Button>
-                  <Button size="sm" variant="outline" leftIcon={<X size={12} />} onClick={() => statusMutation.mutate({ id: order.id, status: 'cancelled' })}>
-                    Reject
-                  </Button>
-                </div>
-              )}
-            />
             <KanbanColumn
               title="Accepted"
               icon={<Check size={16} />}
