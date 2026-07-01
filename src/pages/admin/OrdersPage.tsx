@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Filter, X, ChevronDown, ChevronUp, MapPin, Phone, User } from 'lucide-react';
+import { Search, Filter, Check, X, ChevronDown, ChevronUp, MapPin, Phone, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { getAllOrders, updateOrderStatus } from '../../services/orders';
+import { getAllOrders, updateOrderStatus, verifyPayment, rejectPayment } from '../../services/orders';
 import { OrderStatusBadge } from '../../components/common/OrderStatusBadge';
 import { Button } from '../../components/ui/Button';
 import { formatDate } from '../../utils/formatters';
@@ -11,6 +11,8 @@ import type { Order, OrderStatus } from '../../types/database';
 
 const STATUS_FILTERS: { value: OrderStatus | 'all'; label: string; color: string }[] = [
   { value: 'all', label: 'All Orders', color: 'bg-stone-100 text-stone-700' },
+  { value: 'waiting_verification', label: 'Verify Payment', color: 'bg-blue-100 text-blue-700' },
+  { value: 'payment_pending', label: 'Payment Pending', color: 'bg-yellow-100 text-yellow-700' },
   { value: 'accepted', label: 'Accepted', color: 'bg-amber-100 text-amber-700' },
   { value: 'preparing', label: 'Preparing', color: 'bg-orange-100 text-orange-700' },
   { value: 'ready', label: 'Ready', color: 'bg-green-100 text-green-700' },
@@ -37,6 +39,24 @@ export default function OrdersPage() {
       toast.success('Order status updated');
     },
     onError: () => toast.error('Failed to update order'),
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: (id: string) => verifyPayment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      toast.success('Payment verified, order accepted');
+    },
+    onError: () => toast.error('Failed to verify payment'),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => rejectPayment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      toast.success('Payment rejected, customer notified');
+    },
+    onError: () => toast.error('Failed to reject payment'),
   });
 
   const filteredOrders = orders?.filter(o =>
@@ -192,6 +212,37 @@ export default function OrdersPage() {
 
                       {/* Admin Actions */}
                       <div className="flex flex-wrap gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
+                        {(order.status as string) === 'waiting_verification' && (
+                          <>
+                            <Button
+                              size="sm"
+                              leftIcon={<Check size={14} />}
+                              onClick={() => verifyMutation.mutate(order.id)}
+                              isLoading={verifyMutation.isPending}
+                            >
+                              Verify Payment
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              leftIcon={<X size={14} />}
+                              onClick={() => rejectMutation.mutate(order.id)}
+                              isLoading={rejectMutation.isPending}
+                            >
+                              Reject Payment
+                            </Button>
+                          </>
+                        )}
+                        {(order.status as string) === 'payment_pending' && (
+                          <Button
+                            size="sm"
+                            leftIcon={<Check size={14} />}
+                            onClick={() => verifyMutation.mutate(order.id)}
+                            isLoading={verifyMutation.isPending}
+                          >
+                            Skip &amp; Accept Order
+                          </Button>
+                        )}
                         {(order.status as string) === 'accepted' && (
                           <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'preparing' })} isLoading={statusMutation.isPending}>
                             Start Preparing
