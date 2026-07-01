@@ -133,7 +133,7 @@ export async function submitPayment(orderId: string, amount: number, upiRef?: st
 export async function getAllOrders(status?: OrderStatus) {
   let query = supabase
     .from('orders')
-    .select('*, order_items(*), profiles!orders_user_id_fkey(name, phone)')
+    .select('*, order_items(*), payments(*), profiles!orders_user_id_fkey(name, phone)')
     .order('created_at', { ascending: false });
 
   if (status) query = query.eq('status', status);

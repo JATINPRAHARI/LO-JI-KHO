@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { ShoppingCart, Leaf, ChevronRight, Award, Truck, Heart, Sparkles, Plus, Minus, Trash2 } from 'lucide-react';
@@ -91,6 +92,7 @@ function MenuItemRow({ item, index }: { item: MenuItem; index: number }) {
 export default function MenuPage() {
   const [activeCatSlug, setActiveCatSlug] = useState<string>('maggi');
   const { totalItems, subtotal } = useCart();
+  const navigate = useNavigate();
 
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: getCategories });
   const { data: allItems = [] } = useQuery({
@@ -286,13 +288,14 @@ export default function MenuPage() {
             exit={{ y: 80, opacity: 0 }}
             className="fixed bottom-6 right-6 z-20"
           >
-            <a href="/checkout">
-              <button className="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3.5 rounded-full font-semibold shadow-xl flex items-center gap-3 transition-all hover:shadow-2xl">
-                <ShoppingCart size={18} />
-                <span>{totalItems} {totalItems === 1 ? 'Item' : 'Items'}</span>
-                <span className="text-amber-200 text-sm">Cart (&#x20B9;{subtotal + 50})</span>
-              </button>
-            </a>
+            <button
+              onClick={() => navigate('/checkout')}
+              className="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3.5 rounded-full font-semibold shadow-xl flex items-center gap-3 transition-all hover:shadow-2xl"
+            >
+              <ShoppingCart size={18} />
+              <span>{totalItems} {totalItems === 1 ? 'Item' : 'Items'}</span>
+              <span className="text-amber-200 text-sm">Cart (&#x20B9;{subtotal + 50})</span>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
