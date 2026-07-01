@@ -55,7 +55,7 @@ export function Footer() {
               </li>
               <li className="flex items-start gap-2.5">
                 <MapPin size={14} className="text-brand-accent mt-0.5 shrink-0" />
-                <span>Bandra West, Mumbai - 400050</span>
+                <span>GANGA NAGAR MEERUT</span>
               </li>
             </ul>
           </div>

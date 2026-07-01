@@ -274,7 +274,7 @@ function ContactSection() {
             <h2 className="font-playfair text-3xl font-bold mb-4">Visit or Call Us</h2>
             <p className="text-stone-400 mb-6 leading-relaxed">We&apos;re a cloud kitchen based in Bandra, Mumbai. Order online and we&apos;ll deliver straight to you.</p>
             <dl className="space-y-3 text-sm">
-              <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><MapPin size={14} /> Address</dt><dd className="text-stone-300">Bandra West, Mumbai - 400050</dd></div>
+              <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><MapPin size={14} /> Address</dt><dd className="text-stone-300">GANGA NAGAR MEERUT</dd></div>
               <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><Phone size={14} /> Phone</dt><dd className="text-stone-300">+91 79060 39087</dd></div>
               <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0">Email</dt><dd className="text-stone-300">nikitaprahri12@gmail.com</dd></div>
               <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><Clock size={14} /> Hours</dt><dd className="text-stone-300">Mon&ndash;Sun: 10:00 AM &ndash; 11:00 PM</dd></div>
@@ -283,7 +283,7 @@ function ContactSection() {
           <div className="bg-white/10 rounded-2xl overflow-hidden h-56 flex items-center justify-center border border-white/10">
             <div className="text-center text-stone-400">
               <MapPin size={32} className="mx-auto mb-2 text-brand-accent" />
-              <p className="text-sm">Bandra West, Mumbai</p>
+              <p className="text-sm">GANGA NAGAR MEERUT</p>
               <p className="text-xs mt-1 text-stone-500">Cloud Kitchen &bull; Delivery Only</p>
             </div>
           </div>

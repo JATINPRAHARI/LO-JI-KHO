@@ -44,8 +44,8 @@ export default function QRPage() {
       delivery_fee: Number(settings?.delivery_fee ?? 40),
       gst_percent: Number(settings?.gst_percent ?? 0),
       min_order_amount: Number(settings?.min_order_amount ?? 0),
-      delivery_lat: Number(settings?.delivery_lat ?? 19.076),
-      delivery_lng: Number(settings?.delivery_lng ?? 72.8777),
+      delivery_lat: Number(settings?.delivery_lat ?? 28.984),
+      delivery_lng: Number(settings?.delivery_lng ?? 77.706),
       delivery_radius_km: Number(settings?.delivery_radius_km ?? 5),
     },
   });

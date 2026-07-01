@@ -160,7 +160,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                   <Home size={16} className="text-amber-700 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-stone-900">Home</p>
-                    <p className="text-xs text-stone-500 mt-0.5">Apt 402, Sunshine Residency, Bandra West, Mumbai</p>
+                    <p className="text-xs text-stone-500 mt-0.5">GANGA NAGAR MEERUT</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100">
