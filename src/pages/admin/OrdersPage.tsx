@@ -1,26 +1,84 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Filter, Check, X, ChevronDown, ChevronUp, MapPin, Phone, User } from 'lucide-react';
+import {
+  Search, Filter, MapPin, Phone, User, Clock, AlertTriangle, Check, X,
+  ChevronDown, ChevronUp, Loader2, Image as ImageIcon, ExternalLink
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { getAllOrders, updateOrderStatus, verifyPayment, rejectPayment } from '../../services/orders';
+import { supabase } from '../../lib/supabase';
+import { getAllOrders, updateOrderStatus, verifyPayment, rejectPayment, cancelOrder } from '../../services/orders';
 import { OrderStatusBadge } from '../../components/common/OrderStatusBadge';
-import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { formatDate } from '../../utils/formatters';
 import type { Order, OrderStatus } from '../../types/database';
 
-const STATUS_FILTERS: { value: OrderStatus | 'all'; label: string; color: string }[] = [
-  { value: 'all', label: 'All Orders', color: 'bg-stone-100 text-stone-700' },
-  { value: 'waiting_verification', label: 'Verify Payment', color: 'bg-blue-100 text-blue-700' },
-  { value: 'payment_pending', label: 'Payment Pending', color: 'bg-yellow-100 text-yellow-700' },
-  { value: 'accepted', label: 'Accepted', color: 'bg-amber-100 text-amber-700' },
-  { value: 'preparing', label: 'Preparing', color: 'bg-orange-100 text-orange-700' },
-  { value: 'ready', label: 'Ready', color: 'bg-green-100 text-green-700' },
-  { value: 'out_for_delivery', label: 'Out for Delivery', color: 'bg-purple-100 text-purple-700' },
-  { value: 'delivered', label: 'Delivered', color: 'bg-green-100 text-green-700' },
-  { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-700' },
+// ── Status flow & config ──────────────────────────────────────────────
+const STATUS_FLOW: OrderStatus[] = [
+  'waiting_verification',
+  'accepted',
+  'preparing',
+  'ready',
+  'out_for_delivery',
+  'delivered',
 ];
 
+const STEP_INDEX = Object.fromEntries(STATUS_FLOW.map((s, i) => [s, i] as const)) as Record<OrderStatus, number>;
+
+const STATUS_BUTTONS: {
+  key: OrderStatus;
+  label: string;
+  color: string;
+  bg: string;
+  hover: string;
+  icon: string;
+}[] = [
+  { key: 'waiting_verification', label: 'Verify Payment',   color: '#2563eb', bg: '#eff6ff', hover: '#dbeafe', icon: '✓' },
+  { key: 'accepted',              label: 'Accept Order',     color: '#059669', bg: '#ecfdf5', hover: '#d1fae5', icon: '✓' },
+  { key: 'preparing',             label: 'Start Preparing',  color: '#ea580c', bg: '#fff7ed', hover: '#ffedd5', icon: '🍳' },
+  { key: 'ready',                 label: 'Mark Ready',       color: '#7c3aed', bg: '#f5f3ff', hover: '#ede9fe', icon: '📦' },
+  { key: 'out_for_delivery',      label: 'Out for Delivery', color: '#4f46e5', bg: '#eef2ff', hover: '#e0e7ff', icon: '🚚' },
+  { key: 'delivered',             label: 'Mark Delivered',   color: '#10b981', bg: '#ecfdf5', hover: '#d1fae5', icon: '✓' },
+];
+
+const CANCELLED_BUTTON = { key: 'cancelled' as OrderStatus, label: 'Cancel Order', color: '#dc2626', bg: '#fef2f2', hover: '#fee2e2', icon: '✕' };
+
+function getOrderStep(order: Order) {
+  return STEP_INDEX[order.status as OrderStatus] ?? -1;
+}
+
+function isAtOrPast(order: Order, status: OrderStatus) {
+  return getOrderStep(order) >= STEP_INDEX[status];
+}
+
+function estDelivery(createdAt: string) {
+  const d = new Date(createdAt);
+  d.setMinutes(d.getMinutes() + 45);
+  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatPhone(phone: string) {
+  if (phone.length === 10) return `${phone.slice(0, 5)} ${phone.slice(5)}`;
+  return phone;
+}
+
+// ── Confirm dialog hook ───────────────────────────────────────────────
+function useConfirm() {
+  const [state, setState] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const confirm = (message: string, onConfirm: () => void) => setState({ message, onConfirm });
+  const dismiss = () => setState(null);
+  return { state, confirm, dismiss };
+}
+
+// ── Rejection reason hook ─────────────────────────────────────────────
+function useRejectReason() {
+  const [state, setState] = useState<{ orderId: string } | null>(null);
+  const open = (orderId: string) => setState({ orderId });
+  const dismiss = () => setState(null);
+  return { state, open, dismiss };
+}
+
+// ── Page component ────────────────────────────────────────────────────
 export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [search, setSearch] = useState('');
@@ -32,13 +90,35 @@ export default function OrdersPage() {
     queryFn: () => getAllOrders(statusFilter === 'all' ? undefined : statusFilter),
   });
 
+  // Realtime subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-orders-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
+  // Mutations
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: OrderStatus }) => updateOrderStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-      toast.success('Order status updated');
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-orders', statusFilter] });
+      const prev = queryClient.getQueriesData({ queryKey: ['admin-orders'] });
+      queryClient.setQueriesData({ queryKey: ['admin-orders'] }, (old: unknown) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((o: Record<string, unknown>) => o.id === id ? { ...o, status } : o);
+      });
+      return { prev };
     },
-    onError: () => toast.error('Failed to update order'),
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) ctx.prev.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      toast.error('Failed to update order status');
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin-orders'] }),
+    onSuccess: () => toast.success('Order status updated'),
   });
 
   const verifyMutation = useMutation({
@@ -50,8 +130,8 @@ export default function OrdersPage() {
     onError: () => toast.error('Failed to verify payment'),
   });
 
-  const rejectMutation = useMutation({
-    mutationFn: (id: string) => rejectPayment(id),
+  const rejectWithReasonMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => rejectPayment(id, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       toast.success('Payment rejected, customer notified');
@@ -59,19 +139,34 @@ export default function OrdersPage() {
     onError: () => toast.error('Failed to reject payment'),
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => cancelOrder(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      toast.success('Order cancelled');
+    },
+    onError: () => toast.error('Failed to cancel order'),
+  });
+
+  const confirm = useConfirm();
+  const rejectBox = useRejectReason();
+
   const filteredOrders = orders?.filter(o =>
     o.order_number.toLowerCase().includes(search.toLowerCase()) ||
     o.customer_name.toLowerCase().includes(search.toLowerCase()) ||
     o.customer_phone.includes(search)
   );
 
+  // ── Render ────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+      {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="font-playfair text-3xl font-bold text-stone-900 dark:text-stone-100">Orders</h1>
-        <p className="text-stone-500 dark:text-stone-400 text-sm mt-1">Manage and track all customer orders.</p>
+        <p className="text-stone-500 dark:text-stone-400 text-sm mt-1">Manage all customer orders, verify payments, and track progress.</p>
       </motion.div>
 
+      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
@@ -90,25 +185,38 @@ export default function OrdersPage() {
             onChange={e => setStatusFilter(e.target.value as OrderStatus | 'all')}
             className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-amber-500 transition-colors"
           >
-            {STATUS_FILTERS.map(f => <option key={f.value} value={f.value}>{f.label} {f.value !== 'all' ? `(${orders?.filter(o => o.status === f.value).length ?? 0})` : ''}</option>)}
+            <option value="all">All Orders ({orders?.length ?? 0})</option>
+            <option value="waiting_verification">Verify Payment ({orders?.filter(o => o.status === 'waiting_verification').length ?? 0})</option>
+            <option value="accepted">Accepted ({orders?.filter(o => o.status === 'accepted').length ?? 0})</option>
+            <option value="preparing">Preparing ({orders?.filter(o => o.status === 'preparing').length ?? 0})</option>
+            <option value="ready">Ready ({orders?.filter(o => o.status === 'ready').length ?? 0})</option>
+            <option value="out_for_delivery">Out for Delivery ({orders?.filter(o => o.status === 'out_for_delivery').length ?? 0})</option>
+            <option value="delivered">Delivered ({orders?.filter(o => o.status === 'delivered').length ?? 0})</option>
+            <option value="cancelled">Cancelled ({orders?.filter(o => o.status === 'cancelled').length ?? 0})</option>
           </select>
         </div>
       </div>
 
-      <div className="space-y-3">
-        {isLoading && <p className="text-stone-400 text-center py-10">Loading orders...</p>}
+      {/* Orders list */}
+      <div className="space-y-4">
+        {isLoading && (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 size={32} className="text-amber-600 animate-spin" />
+          </div>
+        )}
         {!isLoading && (!filteredOrders || filteredOrders.length === 0) && (
-          <div className="text-center py-10">
-            <p className="text-stone-400">No orders found.</p>
+          <div className="text-center py-16">
+            <p className="text-stone-400">No orders found for this filter.</p>
           </div>
         )}
         {filteredOrders?.map((order, i) => {
-          console.log('Order debug:', { id: order.id, status: order.status, order_number: order.order_number });
-          const orderWithItems = order as Order & {
+          const raw = order as Order & {
             order_items?: { name: string; quantity: number; price: number; is_veg: boolean; image_url: string }[];
-            payments?: { status: string; upi_ref: string | null }[];
-            profiles?: { name: string; phone: string };
+            payments?: { id: string; status: string; upi_ref: string | null; amount: number; verified_at: string | null }[];
           };
+          const currentStep = getOrderStep(order);
+          const isTerminal = ['delivered', 'cancelled'].includes(order.status);
+          const isLive = !isTerminal;
 
           return (
             <motion.div
@@ -116,152 +224,321 @@ export default function OrdersPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
-              className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 overflow-hidden"
+              className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm overflow-hidden"
             >
+              {/* ── Card Header ───────────────────────────────────────── */}
               <div
-                className="p-4 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+                className="p-4 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
                 onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                      {expandedOrder === order.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-stone-900 dark:text-stone-100">{order.order_number}</p>
-                      <p className="text-xs text-stone-400">{formatDate(order.created_at)} &bull; {order.customer_name} &bull; {order.customer_phone}</p>
-                    </div>
+                <div className="flex items-center flex-wrap gap-3">
+                  <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                    {expandedOrder === order.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                   </div>
-                  <div className="flex items-center gap-3">
-                    {/* Payment Status Badge */}
-                    {orderWithItems.payments?.[0] && (
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-stone-900 dark:text-stone-100">{order.order_number}</p>
+                    <p className="text-xs text-stone-400 flex items-center gap-1.5 flex-wrap">
+                      <span>{formatDate(order.created_at)}</span>
+                      <span className="hidden xs:inline">&bull;</span>
+                      <span>{order.customer_name}</span>
+                      <span className="hidden xs:inline">&bull;</span>
+                      <span>{formatPhone(order.customer_phone)}</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    {raw.payments?.[0] && (
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        orderWithItems.payments[0].status === 'verified' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                        orderWithItems.payments[0].status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        raw.payments[0].status === 'verified' ? 'bg-green-100 text-green-700' :
+                        raw.payments[0].status === 'failed' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'
                       }`}>
-                        {orderWithItems.payments[0].status === 'verified' ? 'PAID' : orderWithItems.payments[0].status === 'failed' ? 'FAILED' : 'PENDING'}
+                        {raw.payments[0].status === 'verified' ? 'PAID' : raw.payments[0].status === 'failed' ? 'FAILED' : 'PENDING'}
                       </span>
                     )}
-                    <span className="font-bold text-stone-900 dark:text-stone-100">&#x20B9;{order.total_amount}</span>
+                    <span className="font-bold text-stone-900 dark:text-stone-100">₹{order.total_amount}</span>
                     <OrderStatusBadge status={order.status as OrderStatus} />
                   </div>
                 </div>
               </div>
 
-              {/* Admin Action Buttons - ALWAYS VISIBLE */}
-              <div className="px-4 pb-4 flex flex-wrap gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); verifyMutation.mutate(order.id); }}
-                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                >
-                  ✓ Verify Payment
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); rejectMutation.mutate(order.id); }}
-                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                >
-                  ✗ Reject Payment
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'preparing' }); }}
-                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#d97706', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                >
-                  Start Preparing
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'ready' }); }}
-                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                >
-                  Mark Ready
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'out_for_delivery' }); }}
-                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                >
-                  Out for Delivery
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'delivered' }); }}
-                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                >
-                  Mark Delivered
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'cancelled' }); }}
-                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                >
-                  ✗ Cancel
-                </button>
-              </div>
+              {/* ── Action Buttons (always visible) ──────────────────── */}
+              {isLive && (
+                <div className="px-4 pb-3 flex flex-wrap gap-1.5">
+                  {STATUS_BUTTONS.map(btn => {
+                    const stepIdx = STEP_INDEX[btn.key];
+                    const isActive = order.status === btn.key;
+                    const isPast = currentStep > stepIdx;
+                    const isNext = currentStep === stepIdx - 1;
+                    const canClick = isActive || isNext;
 
+                    if (isPast) return null;
+
+                    const handleClick = (e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      if (btn.key === 'delivered') {
+                        confirm.confirm(`Mark order ${order.order_number} as delivered?`, () =>
+                          statusMutation.mutate({ id: order.id, status: 'delivered' })
+                        );
+                        return;
+                      }
+                      if (btn.key === 'waiting_verification') {
+                        verifyMutation.mutate(order.id);
+                        return;
+                      }
+                      statusMutation.mutate({ id: order.id, status: btn.key });
+                    };
+
+                    const isLoading = btn.key === 'waiting_verification' ? verifyMutation.isPending : statusMutation.isPending;
+
+                    return (
+                      <button
+                        key={btn.key}
+                        onClick={handleClick}
+                        disabled={!canClick || isLoading}
+                        style={{
+                          padding: '5px 12px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          background: canClick ? btn.color : '#e5e7eb',
+                          color: canClick ? '#fff' : '#9ca3af',
+                          border: isActive ? `2px solid ${btn.color}` : 'none',
+                          borderRadius: '6px',
+                          cursor: canClick ? 'pointer' : 'not-allowed',
+                          opacity: canClick ? 1 : 0.5,
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {isLoading ? '...' : `${btn.icon} ${btn.label}`}
+                      </button>
+                    );
+                  })}
+
+                  {/* Cancel button */}
+                  {!isTerminal && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        confirm.confirm(`Cancel order ${order.order_number}? This cannot be undone.`, () =>
+                          cancelMutation.mutate(order.id)
+                        );
+                      }}
+                      disabled={cancelMutation.isPending}
+                      style={{
+                        padding: '5px 12px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        background: cancelMutation.isPending ? '#fca5a5' : '#fee2e2',
+                        color: '#dc2626',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {cancelMutation.isPending ? '...' : '✕ Cancel Order'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* ── Expanded details ──────────────────────────────────── */}
               {expandedOrder === order.id && (
                 <div className="border-t border-stone-100 dark:border-stone-800">
                   <div className="p-4 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-stone-50 dark:bg-stone-800 rounded-xl p-3">
-                          <p className="text-xs text-stone-400 uppercase tracking-wide mb-2 font-semibold flex items-center gap-1"><User size={12} /> Customer</p>
-                          <p className="font-semibold text-stone-900 dark:text-stone-100">{order.customer_name}</p>
-                          <p className="text-sm text-stone-600 dark:text-stone-400 flex items-center gap-1 mt-0.5"><Phone size={11} /> {order.customer_phone}</p>
+
+                    {/* Payment Verification Section */}
+                    {raw.payments?.[0] && (
+                      <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-bold text-blue-800 dark:text-blue-300">Payment Details</h3>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            raw.payments[0].status === 'verified' ? 'bg-green-100 text-green-700' :
+                            raw.payments[0].status === 'failed' ? 'bg-red-100 text-red-700' :
+                            'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {raw.payments[0].status === 'verified' ? 'Verified' :
+                             raw.payments[0].status === 'failed' ? 'Rejected' : 'Pending'}
+                          </span>
                         </div>
-                        <div className="bg-stone-50 dark:bg-stone-800 rounded-xl p-3">
-                          <p className="text-xs text-stone-400 uppercase tracking-wide mb-2 font-semibold flex items-center gap-1"><MapPin size={12} /> Delivery Address</p>
-                          <p className="text-sm text-stone-700 dark:text-stone-300">{order.delivery_address}</p>
-                          {order.delivery_landmark && <p className="text-xs text-stone-400 mt-1">Near: {order.delivery_landmark}</p>}
-                          {order.delivery_instructions && <p className="text-xs text-amber-600 mt-1">Note: {order.delivery_instructions}</p>}
-                        </div>
-                        <div className="bg-stone-50 dark:bg-stone-800 rounded-xl p-3">
-                          <p className="text-xs text-stone-400 uppercase tracking-wide mb-2 font-semibold">Payment</p>
-                          {orderWithItems.payments?.[0] ? (
-                            <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${
-                              orderWithItems.payments[0].status === 'verified' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                              orderWithItems.payments[0].status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                            }`}>
-                              {orderWithItems.payments[0].status === 'verified' ? 'Verified' :
-                               orderWithItems.payments[0].status === 'failed' ? 'Failed' : 'Pending'}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-stone-400">No payment yet</span>
-                          )}
-                          <div className="mt-2 space-y-0.5">
-                            <p className="text-sm text-stone-700 dark:text-stone-300">Subtotal: &#x20B9;{order.subtotal}</p>
-                            <p className="text-sm text-stone-700 dark:text-stone-300">Delivery: &#x20B9;{order.delivery_fee}</p>
-                            {order.discount_amount > 0 && <p className="text-sm text-green-600">-Discount: &#x20B9;{order.discount_amount}</p>}
-                            <p className="font-bold text-stone-900 dark:text-stone-100 mt-1">Total: &#x20B9;{order.total_amount}</p>
-                            {order.offer_code && <p className="text-xs text-amber-600">Coupon: {order.offer_code}</p>}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs text-blue-500">Amount</p>
+                            <p className="font-semibold text-blue-900 dark:text-blue-100">₹{raw.payments[0].amount}</p>
                           </div>
+                          {raw.payments[0].upi_ref && (
+                            <div>
+                              <p className="text-xs text-blue-500">UPI Ref</p>
+                              <p className="font-mono text-xs text-blue-900 dark:text-blue-100 break-all">{raw.payments[0].upi_ref}</p>
+                            </div>
+                          )}
+                          {raw.payments[0].verified_at && (
+                            <div>
+                              <p className="text-xs text-blue-500">Verified At</p>
+                              <p className="font-semibold text-blue-900 dark:text-blue-100">{formatDate(raw.payments[0].verified_at)}</p>
+                            </div>
+                          )}
+                        </div>
+                        {/* Approve / Reject buttons for pending payments */}
+                        {raw.payments[0].status === 'processing' && (
+                          <div className="flex gap-2 mt-3">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); verifyMutation.mutate(order.id); }}
+                              disabled={verifyMutation.isPending}
+                              style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, background: '#059669', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                            >
+                              {verifyMutation.isPending ? '...' : '✓ Approve Payment'}
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); rejectBox.open(order.id); }}
+                              disabled={rejectWithReasonMutation.isPending}
+                              style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                            >
+                              {rejectWithReasonMutation.isPending ? '...' : '✕ Reject Payment'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Customer & Address */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-3">
+                        <p className="text-xs text-stone-400 uppercase tracking-wide mb-1.5 font-semibold flex items-center gap-1"><User size={12} /> Customer</p>
+                        <p className="font-semibold text-stone-900 dark:text-stone-100">{order.customer_name}</p>
+                        <p className="text-sm text-stone-600 dark:text-stone-400 flex items-center gap-1 mt-0.5"><Phone size={11} /> {formatPhone(order.customer_phone)}</p>
+                      </div>
+                      <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-3">
+                        <p className="text-xs text-stone-400 uppercase tracking-wide mb-1.5 font-semibold flex items-center gap-1"><MapPin size={12} /> Delivery Address</p>
+                        <p className="text-sm text-stone-700 dark:text-stone-300">{order.delivery_address}</p>
+                        {order.delivery_landmark && <p className="text-xs text-stone-400 mt-0.5">Near: {order.delivery_landmark}</p>}
+                        {order.delivery_instructions && <p className="text-xs text-amber-600 mt-0.5">Note: {order.delivery_instructions}</p>}
+                      </div>
+                      <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-3">
+                        <p className="text-xs text-stone-400 uppercase tracking-wide mb-1.5 font-semibold flex items-center gap-1"><Clock size={12} /> Timing</p>
+                        <p className="text-sm text-stone-700 dark:text-stone-300">Ordered: {formatDate(order.created_at)}</p>
+                        <p className="text-sm text-stone-700 dark:text-stone-300">Est. Delivery: {estDelivery(order.created_at)}</p>
+                      </div>
+                    </div>
+
+                    {/* Order Items */}
+                    {raw.order_items && raw.order_items.length > 0 && (
+                      <div>
+                        <p className="text-xs text-stone-400 uppercase tracking-wide mb-2 font-semibold">Items ({raw.order_items.length})</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {raw.order_items.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-2.5 p-2 bg-stone-50 dark:bg-stone-800/50 rounded-lg">
+                              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shrink-0 text-white text-xs font-bold">
+                                {item.quantity}x
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-stone-900 dark:text-stone-100 truncate">{item.name}</p>
+                                <p className="text-xs text-stone-400">₹{item.price * item.quantity}</p>
+                              </div>
+                              <span className={`w-3.5 h-3.5 rounded-sm border-2 shrink-0 ${item.is_veg ? 'border-green-600 bg-green-600' : 'border-red-600 bg-red-600'}`} />
+                            </div>
+                          ))}
                         </div>
                       </div>
+                    )}
 
-                      {/* Order Items */}
-                      {orderWithItems.order_items && orderWithItems.order_items.length > 0 && (
-                        <div>
-                          <p className="text-xs text-stone-400 uppercase tracking-wide mb-2">Order Items ({orderWithItems.order_items.length})</p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {orderWithItems.order_items.map((item, idx) => (
-                              <div key={idx} className="flex items-center gap-3 p-2 bg-stone-50 dark:bg-stone-800 rounded-xl">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-primary to-brand-accent flex items-center justify-center shrink-0">
-                                  <span className="text-white text-xs font-bold">{item.quantity}x</span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-stone-900 dark:text-stone-100 truncate">{item.name}</p>
-                                  <p className="text-xs text-stone-400">&#x20B9;{item.price * item.quantity}</p>
-                                </div>
-                                <span className={`w-4 h-4 rounded border-2 ${item.is_veg ? 'border-green-600 bg-green-600' : 'border-red-600 bg-red-600'}`} />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
+                    {/* Totals */}
+                    <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                      <span className="text-stone-500">Subtotal: <strong className="text-stone-900 dark:text-stone-100">₹{order.subtotal}</strong></span>
+                      <span className="text-stone-500">Delivery: <strong className="text-stone-900 dark:text-stone-100">₹{order.delivery_fee}</strong></span>
+                      {order.gst_amount > 0 && <span className="text-stone-500">GST: <strong className="text-stone-900 dark:text-stone-100">₹{order.gst_amount}</strong></span>}
+                      {order.discount_amount > 0 && <span className="text-green-600">Discount: <strong>-₹{order.discount_amount}</strong></span>}
+                      {order.offer_code && <span className="text-amber-600">Coupon: <strong>{order.offer_code}</strong></span>}
+                      <span className="text-stone-900 dark:text-stone-100 font-bold">Total: <strong>₹{order.total_amount}</strong></span>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
             </motion.div>
           );
         })}
       </div>
+
+      {/* ── Confirm Dialog ──────────────────────────────────────────── */}
+      <Modal isOpen={!!confirm.state} onClose={confirm.dismiss} size="sm">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+            <AlertTriangle size={24} className="text-amber-600" />
+          </div>
+          <p className="text-stone-900 dark:text-stone-100 font-semibold mb-5">{confirm.state?.message}</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => { confirm.state?.onConfirm(); confirm.dismiss(); }}
+              className="px-5 py-2 bg-amber-600 text-white text-sm font-semibold rounded-xl hover:bg-amber-700 transition-colors"
+            >
+              Confirm
+            </button>
+            <button
+              onClick={confirm.dismiss}
+              className="px-5 py-2 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 text-sm font-semibold rounded-xl hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Rejection Reason Dialog ─────────────────────────────────── */}
+      <RejectReasonModal
+        isOpen={!!rejectBox.state}
+        orderId={rejectBox.state?.orderId ?? ''}
+        onClose={rejectBox.dismiss}
+        onReject={(id, reason) => {
+          rejectWithReasonMutation.mutate({ id, reason });
+          rejectBox.dismiss();
+        }}
+        isLoading={rejectWithReasonMutation.isPending}
+      />
     </div>
+  );
+}
+
+// ── Rejection reason modal ────────────────────────────────────────────
+function RejectReasonModal({ isOpen, orderId, onClose, onReject, isLoading }: {
+  isOpen: boolean;
+  orderId: string;
+  onClose: () => void;
+  onReject: (id: string, reason: string) => void;
+  isLoading: boolean;
+}) {
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) setReason('');
+  }, [isOpen]);
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="sm">
+      <div>
+        <h3 className="font-bold text-stone-900 dark:text-stone-100 mb-2">Reject Payment</h3>
+        <p className="text-sm text-stone-500 mb-3">Provide a reason for rejecting this payment. The customer will be notified.</p>
+        <textarea
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          placeholder="e.g. Invalid UPI transaction, amount mismatch..."
+          rows={3}
+          className="w-full border border-stone-200 dark:border-stone-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-red-500 transition-colors bg-white dark:bg-stone-900 resize-none"
+        />
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={() => onReject(orderId, reason)}
+            disabled={isLoading}
+            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: isLoading ? '#fca5a5' : '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', flex: 1 }}
+          >
+            {isLoading ? 'Rejecting...' : 'Reject Payment'}
+          </button>
+          <button
+            onClick={onClose}
+            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }

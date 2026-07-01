@@ -146,7 +146,7 @@ export async function getAllOrders(status?: OrderStatus) {
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   const { data: order, error } = await supabase
     .from('orders')
-    .update({ status })
+    .update({ status, updated_at: new Date().toISOString() })
     .eq('id', orderId)
     .select()
     .single();
@@ -190,7 +190,7 @@ export async function verifyPayment(orderId: string) {
 export async function cancelOrder(orderId: string) {
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .update({ status: 'cancelled' })
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
     .eq('id', orderId)
     .select()
     .single();
@@ -207,7 +207,7 @@ export async function cancelOrder(orderId: string) {
   return order;
 }
 
-export async function rejectPayment(orderId: string) {
+export async function rejectPayment(orderId: string, reason?: string) {
   const { error: paymentError } = await supabase
     .from('payments')
     .update({ status: 'failed', updated_at: new Date().toISOString() })
@@ -216,16 +216,17 @@ export async function rejectPayment(orderId: string) {
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .update({ status: 'payment_pending' })
+    .update({ status: 'payment_pending', updated_at: new Date().toISOString() })
     .eq('id', orderId)
     .select()
     .single();
   if (orderError) throw orderError;
 
+  const rejectMsg = reason ? ` Reason: ${reason}` : '';
   await supabase.from('notifications').insert({
     user_id: order.user_id,
     title: 'Payment Rejected',
-    message: `Your payment for order ${order.order_number} was not verified. Please try again with a valid UPI transaction.`,
+    message: `Your payment for order ${order.order_number} was not verified.${rejectMsg} Please try again with a valid UPI transaction.`,
     type: 'payment_pending',
     order_id: orderId,
   });
