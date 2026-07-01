@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { MapPin, Phone, User, Tag, X, Trash2, Plus, Minus } from 'lucide-react';
+import { MapPin, Phone, User, Tag, X, Trash2, Plus, Minus, Navigation } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { validateCoupon } from '../../services/offers';
 import { getAddresses } from '../../services/addresses';
+import { getAllSettings } from '../../services/settings';
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { Button } from '../../components/ui/Button';
@@ -19,6 +20,17 @@ import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { iconForItem } from '../../utils/iconForItem';
 import type { Address } from '../../types/database';
+
+function getDistanceFromLatLngInKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 const schema = z.object({
   name: z.string().min(2, 'Name required'),
@@ -38,11 +50,19 @@ export default function CheckoutPage() {
   const [appliedOffer, setAppliedOffer] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationChecking, setLocationChecking] = useState(false);
 
   const { data: addresses } = useQuery({
     queryKey: ['addresses'],
     queryFn: getAddresses,
     enabled: !!user,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: getAllSettings,
   });
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
@@ -52,6 +72,26 @@ export default function CheckoutPage() {
 
   const deliveryFee = 50;
   const total = subtotal + deliveryFee - discount;
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation not supported');
+      return;
+    }
+    setLocationChecking(true);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocationError(null);
+        setLocationChecking(false);
+      },
+      err => {
+        setLocationError('Unable to verify location. Enable GPS and reload.');
+        setLocationChecking(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }, []);
 
   if (items.length === 0) {
     return (
@@ -88,6 +128,22 @@ export default function CheckoutPage() {
 
   async function onSubmit(data: FormData) {
     try {
+      // Validate delivery location
+      if (settings?.delivery_lat && settings?.delivery_lng && settings?.delivery_radius_km) {
+        if (!userLocation) {
+          toast.error('Unable to verify your location. Please enable GPS and reload.');
+          return;
+        }
+        const restaurantLat = Number(settings.delivery_lat);
+        const restaurantLng = Number(settings.delivery_lng);
+        const maxRadius = Number(settings.delivery_radius_km);
+        const distance = getDistanceFromLatLngInKm(restaurantLat, restaurantLng, userLocation.lat, userLocation.lng);
+        if (distance > maxRadius) {
+          toast.error(`Sorry, we only deliver within ${maxRadius} km of our location. Your distance is ${distance.toFixed(1)} km.`);
+          return;
+        }
+      }
+
       // Save order data to sessionStorage for payment page to pick up
       const orderData = {
         user_id: user?.id ?? null,
@@ -270,6 +326,14 @@ export default function CheckoutPage() {
                     <span>&#x20B9;{total}</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Delivery Area Status */}
+              <div className={`rounded-2xl p-3 text-xs flex items-center gap-2 ${locationError ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400' : userLocation ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400'}`}>
+                <Navigation size={14} className="shrink-0" />
+                <span>
+                  {locationChecking ? 'Detecting your location...' : locationError ? locationError : 'Delivery address is within our service area'}
+                </span>
               </div>
 
               <Button type="submit" size="lg" className="w-full" isLoading={isSubmitting}>

@@ -4,7 +4,7 @@ import { reviews } from '../data/menuData';
 const extended = [
   ...reviews,
   { id: 'r5', rating: 5, text: '"Ordered the Truffle Pink Penne and it was absolutely divine. Restaurant quality at home prices!"', author: '- Priya S.' },
-  { id: 'r6', rating: 4, text: '"The cold brew is something else. Cannot get enough of it. Will be ordering every single day."', author: '- Arjun M.' },
+  { id: 'r6', rating: 4, text: '"The cold brew is something else. Cannot get enough of it. Will be ordering every single day."', author: '- Nikita P.' },
   { id: 'r7', rating: 5, text: '"Finally, a cloud kitchen that actually delivers on quality. The packaging is premium too!"', author: '- Neha R.' },
   { id: 'r8', rating: 5, text: '"Masala Maggi brought back childhood memories but elevated. Highly recommend to everyone."', author: '- Kabir D.' },
 ];

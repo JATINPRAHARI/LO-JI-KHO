@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Phone, Mail, MapPin, Clock, Instagram, Twitter, Facebook } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Instagram } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -23,11 +23,9 @@ export function Footer() {
               Premium comfort food — artisanal Maggi, gourmet sandwiches, and hand-crafted pastas delivered hot to your doorstep.
             </p>
             <div className="flex items-center gap-3 mt-5">
-              {[Instagram, Twitter, Facebook].map((Icon, i) => (
-                <a key={i} href="#" className="w-9 h-9 bg-stone-800 hover:bg-brand-primary rounded-xl flex items-center justify-center text-stone-400 hover:text-white transition-all">
-                  <Icon size={16} />
-                </a>
-              ))}
+              <a href="https://www.instagram.com/lojikhao_official?igsh=MWlhMms5ZTVoNWxmNw==" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-stone-800 hover:bg-brand-primary rounded-xl flex items-center justify-center text-stone-400 hover:text-white transition-all">
+                <Instagram size={16} />
+              </a>
             </div>
           </div>
 
@@ -49,11 +47,11 @@ export function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2.5">
                 <Phone size={14} className="text-brand-accent mt-0.5 shrink-0" />
-                <span>+91 98765 43210</span>
+                <span>+91 79060 39087</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Mail size={14} className="text-brand-accent mt-0.5 shrink-0" />
-                <span>hello@lojikhao.in</span>
+                <span>nikitaprahri12@gmail.com</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <MapPin size={14} className="text-brand-accent mt-0.5 shrink-0" />

@@ -6,8 +6,8 @@ interface ProfilePageProps {
 }
 
 const orderHistory = [
-  { id: 'h1', name: 'Artisanal Grilled Sandwich Meal', date: 'Yesterday, 8:45 PM', price: 450 },
-  { id: 'h2', name: 'Creamy Alfredo Pasta (Ex-Cheese)', date: '12 Oct 2023, 1:20 PM', price: 380 },
+  { id: 'h1', name: 'Artisanal Grilled Sandwich Meal', date: 'Yesterday, 8:45 PM', price: 460 },
+  { id: 'h2', name: 'Creamy Alfredo Pasta (Ex-Cheese)', date: '12 Oct 2023, 1:20 PM', price: 390 },
 ];
 
 export default function ProfilePage({ onNavigate }: ProfilePageProps) {
@@ -111,7 +111,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                 </button>
               </div>
               <h3 className="font-playfair font-bold text-stone-900 text-lg">Rohan Malhotra</h3>
-              <p className="text-stone-400 text-sm mt-0.5">+91 98765 43210</p>
+              <p className="text-stone-400 text-sm mt-0.5">+91 79060 39087</p>
 
               <div className="flex items-center justify-around mt-5 pt-5 border-t border-stone-100">
                 <div className="text-center">

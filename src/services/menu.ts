@@ -113,6 +113,24 @@ export async function toggleMenuItemActive(id: string, isActive: boolean) {
   return data;
 }
 
+export async function increaseAllPrices(amount: number) {
+  const { data: items, error: fetchError } = await supabase
+    .from('menu_items')
+    .select('id, price');
+  if (fetchError) throw fetchError;
+  if (!items?.length) return [];
+  const updates = items.map(item => ({
+    id: item.id,
+    price: item.price + amount,
+  }));
+  const { data, error } = await supabase
+    .from('menu_items')
+    .upsert(updates.map(u => ({ id: u.id, price: u.price, updated_at: new Date().toISOString() })), { onConflict: 'id' })
+    .select();
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function createCategory(cat: CategoryInsert) {
   const { data, error } = await supabase.from('categories').insert(cat).select().single();
   if (error) throw error;

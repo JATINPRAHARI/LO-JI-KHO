@@ -35,7 +35,7 @@ export default function CheckoutPage({ cart, onNavigate, onClearCart }: Checkout
   const total = cart.reduce((s, i) => s + i.price * i.quantity, 0) || 458;
 
   function handleCopy() {
-    navigator.clipboard.writeText('lo-ji-khao@upi').catch(() => {});
+    navigator.clipboard.writeText('7906039087@kotak').catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -117,7 +117,7 @@ export default function CheckoutPage({ cart, onNavigate, onClearCart }: Checkout
 
                 {/* UPI ID */}
                 <div className="flex items-center justify-between bg-stone-50 border border-stone-200 rounded-xl px-4 py-3">
-                  <span className="text-sm font-semibold text-stone-800">lo-ji-khao@upi</span>
+                  <span className="text-sm font-semibold text-stone-800">7906039087@kotak</span>
                   <button
                     onClick={handleCopy}
                     className="text-stone-400 hover:text-amber-700 transition-colors"
@@ -212,13 +212,16 @@ export default function CheckoutPage({ cart, onNavigate, onClearCart }: Checkout
             <div className="bg-white rounded-2xl shadow-sm border border-amber-100 p-4 flex items-center gap-4">
               <img
                 src="https://images.pexels.com/photos/887827/pexels-photo-887827.jpeg?auto=compress&cs=tinysrgb&w=100"
-                alt="Chef Arjun"
+                alt="Nikita Prahari"
                 className="w-14 h-14 rounded-full object-cover shrink-0"
               />
               <div className="flex-1">
-                <p className="font-semibold text-stone-900">Chef Arjun</p>
+                <p className="font-semibold text-stone-900">Nikita Prahari</p>
                 <p className="text-xs text-stone-400">Cloud Kitchen Expert</p>
               </div>
+              <a href="https://www.instagram.com/lojikhao_official?igsh=MWlhMms5ZTVoNWxmNw==" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-amber-100 hover:bg-amber-200 text-amber-600 rounded-full flex items-center justify-center transition-colors">
+                <Instagram size={16} />
+              </a>
               <button className="w-10 h-10 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-full flex items-center justify-center transition-colors">
                 <Phone size={16} />
               </button>

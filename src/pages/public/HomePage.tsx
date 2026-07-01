@@ -275,8 +275,8 @@ function ContactSection() {
             <p className="text-stone-400 mb-6 leading-relaxed">We&apos;re a cloud kitchen based in Bandra, Mumbai. Order online and we&apos;ll deliver straight to you.</p>
             <dl className="space-y-3 text-sm">
               <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><MapPin size={14} /> Address</dt><dd className="text-stone-300">Bandra West, Mumbai - 400050</dd></div>
-              <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><Phone size={14} /> Phone</dt><dd className="text-stone-300">+91 98765 43210</dd></div>
-              <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0">Email</dt><dd className="text-stone-300">hello@lojikhao.in</dd></div>
+              <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><Phone size={14} /> Phone</dt><dd className="text-stone-300">+91 79060 39087</dd></div>
+              <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0">Email</dt><dd className="text-stone-300">nikitaprahri12@gmail.com</dd></div>
               <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><Clock size={14} /> Hours</dt><dd className="text-stone-300">Mon&ndash;Sun: 10:00 AM &ndash; 11:00 PM</dd></div>
             </dl>
           </div>

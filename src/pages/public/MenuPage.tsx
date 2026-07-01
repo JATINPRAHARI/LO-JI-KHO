@@ -26,8 +26,8 @@ const categoryMeta: Record<string, { emoji: string; image: string; note?: string
 };
 
 const offers = [
-  { label: 'Order Above ₹199', discount: '₹10 OFF' },
-  { label: 'Order Above ₹299', discount: '1 FREE Cold Drink' },
+  { label: 'Order Above ₹209', discount: '₹10 OFF' },
+  { label: 'Order Above ₹309', discount: '1 FREE Cold Drink' },
 ];
 
 const itemAnim = {

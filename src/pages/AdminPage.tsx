@@ -18,7 +18,7 @@ const kitchenOrders = [
   {
     id: 'ko1',
     customer: 'Rahul Sharma',
-    phone: '+91 98765 43210',
+    phone: '+91 79060 39087',
     items: ['1× Grilled Cheese Sandwich', '2× Masala Maggi (Extra Spicy)', '1× Cold Coffee'],
     total: 540,
     status: 'PREPARING' as const,
@@ -26,7 +26,7 @@ const kitchenOrders = [
   {
     id: 'ko2',
     customer: 'Ananya Singh',
-    phone: '+91 91234 56789',
+    phone: '+91 79060 39087',
     items: ['2× Paneer Makhani Pasta'],
     total: 780,
     status: 'PENDING' as const,
@@ -34,7 +34,7 @@ const kitchenOrders = [
   {
     id: 'ko3',
     customer: 'Vikram V.',
-    phone: '+91 88888 77777',
+    phone: '+91 79060 39087',
     items: ['1× Nutella Sandwich', '1× Hot Chocolate'],
     total: 320,
     status: 'READY' as const,
@@ -298,8 +298,8 @@ export default function AdminPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { name: 'Peri Peri Maggi', price: 149, category: 'MAGGI', inStock: true },
-                    { name: 'Grilled Sourdough', price: 199, category: 'SANDWICH', inStock: true },
+                    { name: 'Peri Peri Maggi', price: 159, category: 'MAGGI', inStock: true },
+                    { name: 'Grilled Sourdough', price: 209, category: 'SANDWICH', inStock: true },
                   ].map(item => (
                     <div key={item.name} className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
                       <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-brand-primary to-brand-accent flex items-center justify-center shrink-0">

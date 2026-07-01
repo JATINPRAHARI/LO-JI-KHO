@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { QrCode, Link, Save, Copy, Check, Trash2, ImagePlus } from 'lucide-react';
+import { QrCode, Link, Save, Copy, Check, Trash2, ImagePlus, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
@@ -18,6 +18,9 @@ const schema = z.object({
   delivery_fee: z.coerce.number().min(0, 'Fee must be 0 or more'),
   gst_percent: z.coerce.number().min(0).max(100, 'GST must be 0-100%'),
   min_order_amount: z.coerce.number().min(0),
+  delivery_lat: z.coerce.number().min(-90).max(90, 'Invalid latitude'),
+  delivery_lng: z.coerce.number().min(-180).max(180, 'Invalid longitude'),
+  delivery_radius_km: z.coerce.number().min(0.1, 'Radius must be at least 0.1 km'),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -41,6 +44,9 @@ export default function QRPage() {
       delivery_fee: Number(settings?.delivery_fee ?? 40),
       gst_percent: Number(settings?.gst_percent ?? 0),
       min_order_amount: Number(settings?.min_order_amount ?? 0),
+      delivery_lat: Number(settings?.delivery_lat ?? 19.076),
+      delivery_lng: Number(settings?.delivery_lng ?? 72.8777),
+      delivery_radius_km: Number(settings?.delivery_radius_km ?? 5),
     },
   });
 
@@ -62,6 +68,9 @@ export default function QRPage() {
       saveMutation.mutateAsync({ key: 'delivery_fee', value: String(data.delivery_fee) }),
       saveMutation.mutateAsync({ key: 'gst_percent', value: String(data.gst_percent) }),
       saveMutation.mutateAsync({ key: 'min_order_amount', value: String(data.min_order_amount) }),
+      saveMutation.mutateAsync({ key: 'delivery_lat', value: String(data.delivery_lat) }),
+      saveMutation.mutateAsync({ key: 'delivery_lng', value: String(data.delivery_lng) }),
+      saveMutation.mutateAsync({ key: 'delivery_radius_km', value: String(data.delivery_radius_km) }),
     ]);
   }
 
@@ -296,6 +305,17 @@ export default function QRPage() {
               <Input label="Delivery Fee (₹)" type="number" step="1" error={errors.delivery_fee?.message} {...register('delivery_fee')} />
               <Input label="GST Percentage (%)" type="number" step="0.1" error={errors.gst_percent?.message} {...register('gst_percent')} />
               <Input label="Minimum Order Amount (₹)" type="number" {...register('min_order_amount')} />
+
+              <div className="border-t border-stone-200 dark:border-stone-700 pt-4 mt-4">
+                <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4 flex items-center gap-2">
+                  <MapPin size={16} className="text-amber-600" /> Delivery Area
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input label="Restaurant Latitude" type="number" step="any" error={errors.delivery_lat?.message} {...register('delivery_lat')} />
+                  <Input label="Restaurant Longitude" type="number" step="any" error={errors.delivery_lng?.message} {...register('delivery_lng')} />
+                </div>
+                <Input label="Delivery Radius (km)" type="number" step="0.1" error={errors.delivery_radius_km?.message} {...register('delivery_radius_km')} />
+              </div>
 
               <div className="bg-stone-50 dark:bg-stone-800 rounded-xl p-4 mt-4">
                 <p className="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide mb-3">Current Calculation Example</p>

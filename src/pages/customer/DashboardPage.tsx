@@ -22,8 +22,12 @@ const quickLinks = [
 ];
 
 export default function DashboardPage() {
-  const { profile } = useAuth();
-  const { data: orders, isLoading: ordersLoading } = useQuery({ queryKey: ['my-orders'], queryFn: getMyOrders });
+  const { user, profile } = useAuth();
+  const { data: orders, isLoading: ordersLoading } = useQuery({
+    queryKey: ['my-orders', user?.id],
+    queryFn: () => getMyOrders(user!.id),
+    enabled: !!user,
+  });
   const { data: favorites } = useQuery({ queryKey: ['favorites'], queryFn: getFavorites });
 
   const activeOrders = (orders ?? []).filter(o =>

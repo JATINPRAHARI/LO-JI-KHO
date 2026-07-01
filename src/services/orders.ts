@@ -73,10 +73,11 @@ export async function createOrderWithPayment(payload: CreateOrderPayload) {
   return order;
 }
 
-export async function getMyOrders() {
+export async function getMyOrders(userId: string) {
   const { data, error } = await supabase
     .from('orders')
     .select('*, order_items(*)')
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data ?? [];

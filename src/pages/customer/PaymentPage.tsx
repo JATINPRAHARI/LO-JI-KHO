@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Shield, Copy, CheckCircle2, Loader2, ArrowLeft, Phone, ChefHat, XCircle, Clock, Check, Star } from 'lucide-react';
+import { Shield, Copy, CheckCircle2, Loader2, ArrowLeft, Instagram, ChefHat, XCircle, Clock, Check, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
@@ -499,12 +499,12 @@ export default function PaymentPage() {
                 <ChefHat size={24} className="text-white" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-stone-900 dark:text-stone-100">Chef Arjun</p>
+                <p className="font-semibold text-stone-900 dark:text-stone-100">Nikita Prahari</p>
                 <p className="text-xs text-stone-400">Cloud Kitchen Expert &bull; 5&#9733; Rated</p>
               </div>
-              <button className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 text-brand-primary dark:text-brand-accent rounded-full flex items-center justify-center transition-colors">
-                <Phone size={16} />
-              </button>
+              <a href="https://www.instagram.com/lojikhao_official?igsh=MWlhMms5ZTVoNWxmNw==" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 text-brand-primary dark:text-brand-accent rounded-full flex items-center justify-center transition-colors">
+                <Instagram size={16} />
+              </a>
             </div>
 
             {/* Review Section - shown after delivery */}

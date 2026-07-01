@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ShoppingBag, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getMyOrders } from '../../services/orders';
+import { useAuth } from '../../contexts/AuthContext';
 import { OrderStatusBadge } from '../../components/common/OrderStatusBadge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { OrderCardSkeleton } from '../../components/ui/Skeleton';
@@ -11,7 +12,12 @@ import { formatDate } from '../../utils/formatters';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function OrdersPage() {
-  const { data: orders, isLoading } = useQuery({ queryKey: ['my-orders'], queryFn: getMyOrders });
+  const { user } = useAuth();
+  const { data: orders, isLoading } = useQuery({
+    queryKey: ['my-orders', user?.id],
+    queryFn: () => getMyOrders(user!.id),
+    enabled: !!user,
+  });
 
   return (
     <div className="pt-20 min-h-screen bg-[#fefce8] dark:bg-stone-950 pb-10">
