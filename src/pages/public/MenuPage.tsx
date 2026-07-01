@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Leaf, ChevronRight, Award, Truck, Heart, Sparkles } from 'lucide-react';
+import { ShoppingCart, Leaf, ChevronRight, Award, Truck, Heart, Sparkles, Plus, Minus, Trash2 } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
 import { getCategories, getMenuItems } from '../../services/menu';
 import type { MenuItem } from '../../types/database';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { toast } from 'sonner';
 
 interface CategoryDisplay {
   id: string;
@@ -34,12 +35,19 @@ const itemAnim = {
 };
 
 function MenuItemRow({ item, index }: { item: MenuItem; index: number }) {
-  const { addItem } = useCart();
+  const { items, addItem, updateQuantity } = useCart();
+  const cartItem = items.find(i => i.menuItem.id === item.id);
+  const qty = cartItem?.quantity ?? 0;
+
+  async function handleAdd() {
+    await addItem(item);
+    toast.success(`${item.name} added to cart!`);
+  }
 
   return (
     <motion.div
       variants={itemAnim}
-      className="flex items-center justify-between py-3.5 border-b border-stone-100 dark:border-stone-800 last:border-b-0 group"
+      className="flex items-center justify-between py-3.5 border-b border-stone-100 dark:border-stone-800 last:border-b-0"
     >
       <div className="flex-1 min-w-0 pr-4">
         <div className="flex items-center gap-2">
@@ -51,12 +59,30 @@ function MenuItemRow({ item, index }: { item: MenuItem; index: number }) {
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <span className="font-bold text-amber-700 dark:text-amber-400 text-sm">₹{item.price}</span>
-        <button
-          onClick={() => addItem(item)}
-          className="w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-amber-100 dark:hover:bg-amber-900/50"
-        >
-          <ShoppingCart size={13} />
-        </button>
+        {qty > 0 ? (
+          <div className="flex items-center border border-stone-200 dark:border-stone-700 rounded-lg overflow-hidden">
+            <button
+              onClick={() => updateQuantity(item.id, qty - 1)}
+              className="px-2 py-1.5 text-stone-600 dark:text-stone-400 hover:bg-orange-50 dark:hover:bg-stone-800 transition-colors"
+            >
+              {qty === 1 ? <Trash2 size={11} className="text-red-500" /> : <Minus size={11} />}
+            </button>
+            <span className="px-2 text-xs font-bold text-stone-900 dark:text-stone-100">{qty}</span>
+            <button
+              onClick={() => updateQuantity(item.id, qty + 1)}
+              className="px-2 py-1.5 text-stone-600 dark:text-stone-400 hover:bg-orange-50 dark:hover:bg-stone-800 transition-colors"
+            >
+              <Plus size={11} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleAdd}
+            className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex items-center justify-center hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-all"
+          >
+            <ShoppingCart size={13} />
+          </button>
+        )}
       </div>
     </motion.div>
   );

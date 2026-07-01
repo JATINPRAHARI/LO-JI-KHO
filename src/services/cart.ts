@@ -9,39 +9,44 @@ export async function getCartItems() {
   return data ?? [];
 }
 
-export async function addToCart(menuItemId: string, quantity = 1) {
+export async function addToCart(userId: string, menuItemId: string, quantity = 1) {
   const { data, error } = await supabase
     .from('cart_items')
-    .upsert({ menu_item_id: menuItemId, quantity }, { onConflict: 'user_id,menu_item_id' })
+    .upsert({ user_id: userId, menu_item_id: menuItemId, quantity }, { onConflict: 'user_id,menu_item_id' })
     .select()
     .single();
   if (error) throw error;
   return data;
 }
 
-export async function updateCartQuantity(menuItemId: string, quantity: number) {
+export async function updateCartQuantity(userId: string, menuItemId: string, quantity: number) {
   if (quantity <= 0) {
-    return removeFromCart(menuItemId);
+    return removeFromCart(userId, menuItemId);
   }
   const { data, error } = await supabase
     .from('cart_items')
     .update({ quantity })
     .eq('menu_item_id', menuItemId)
+    .eq('user_id', userId)
     .select()
     .single();
   if (error) throw error;
   return data;
 }
 
-export async function removeFromCart(menuItemId: string) {
+export async function removeFromCart(userId: string, menuItemId: string) {
   const { error } = await supabase
     .from('cart_items')
     .delete()
-    .eq('menu_item_id', menuItemId);
+    .eq('menu_item_id', menuItemId)
+    .eq('user_id', userId);
   if (error) throw error;
 }
 
-export async function clearCart() {
-  const { error } = await supabase.from('cart_items').delete().neq('id', '');
+export async function clearCart(userId: string) {
+  const { error } = await supabase
+    .from('cart_items')
+    .delete()
+    .eq('user_id', userId);
   if (error) throw error;
 }

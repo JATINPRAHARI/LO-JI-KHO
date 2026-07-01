@@ -64,7 +64,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const newQty = (existing?.quantity ?? 0) + 1;
 
     if (user) {
-      await cartService.addToCart(menuItem.id, newQty);
+      await cartService.addToCart(user.id, menuItem.id, newQty);
       if (existing) {
         setItems(prev => prev.map(i =>
           i.menuItem.id === menuItem.id ? { ...i, quantity: newQty } : i
@@ -88,7 +88,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return removeItem(menuItemId);
     }
     if (user) {
-      await cartService.updateCartQuantity(menuItemId, quantity);
+      await cartService.updateCartQuantity(user.id, menuItemId, quantity);
     }
     setItems(prev => prev.map(i =>
       i.menuItem.id === menuItemId ? { ...i, quantity } : i
@@ -97,14 +97,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const removeItem = useCallback(async (menuItemId: string) => {
     if (user) {
-      await cartService.removeFromCart(menuItemId);
+      await cartService.removeFromCart(user.id, menuItemId);
     }
     setItems(prev => prev.filter(i => i.menuItem.id !== menuItemId));
   }, [user]);
 
   const clearCart = useCallback(async () => {
     if (user) {
-      await cartService.clearCart();
+      await cartService.clearCart(user.id);
     }
     setItems([]);
     if (!user) localStorage.removeItem(CART_KEY);
