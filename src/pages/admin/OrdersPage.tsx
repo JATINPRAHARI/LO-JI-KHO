@@ -149,56 +149,55 @@ export default function OrdersPage() {
                 </div>
               </div>
 
+              {/* Admin Action Buttons - ALWAYS VISIBLE */}
+              <div className="px-4 pb-4 flex flex-wrap gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); verifyMutation.mutate(order.id); }}
+                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  ✓ Verify Payment
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); rejectMutation.mutate(order.id); }}
+                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  ✗ Reject Payment
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'preparing' }); }}
+                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#d97706', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  Start Preparing
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'ready' }); }}
+                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  Mark Ready
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'out_for_delivery' }); }}
+                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  Out for Delivery
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'delivered' }); }}
+                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  Mark Delivered
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'cancelled' }); }}
+                  style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  ✗ Cancel
+                </button>
+              </div>
+
               {expandedOrder === order.id && (
                 <div className="border-t border-stone-100 dark:border-stone-800">
                   <div className="p-4 space-y-4">
-                      {/* Admin Actions - always visible at top */}
-                      <div className="flex flex-wrap gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
-                        <button
-                          onClick={() => verifyMutation.mutate(order.id)}
-                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                        >
-                          ✓ Verify Payment
-                        </button>
-                        <button
-                          onClick={() => rejectMutation.mutate(order.id)}
-                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                        >
-                          ✗ Reject Payment
-                        </button>
-                        <button
-                          onClick={() => statusMutation.mutate({ id: order.id, status: 'preparing' })}
-                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#d97706', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                        >
-                          Start Preparing
-                        </button>
-                        <button
-                          onClick={() => statusMutation.mutate({ id: order.id, status: 'ready' })}
-                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                        >
-                          Mark Ready
-                        </button>
-                        <button
-                          onClick={() => statusMutation.mutate({ id: order.id, status: 'out_for_delivery' })}
-                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                        >
-                          Out for Delivery
-                        </button>
-                        <button
-                          onClick={() => statusMutation.mutate({ id: order.id, status: 'delivered' })}
-                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                        >
-                          Mark Delivered
-                        </button>
-                        <button
-                          onClick={() => statusMutation.mutate({ id: order.id, status: 'cancelled' })}
-                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                        >
-                          ✗ Cancel
-                        </button>
-                      </div>
-
-                      {/* Customer & Address */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="bg-stone-50 dark:bg-stone-800 rounded-xl p-3">
                           <p className="text-xs text-stone-400 uppercase tracking-wide mb-2 font-semibold flex items-center gap-1"><User size={12} /> Customer</p>
