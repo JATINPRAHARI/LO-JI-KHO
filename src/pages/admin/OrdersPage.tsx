@@ -152,6 +152,52 @@ export default function OrdersPage() {
               {expandedOrder === order.id && (
                 <div className="border-t border-stone-100 dark:border-stone-800">
                   <div className="p-4 space-y-4">
+                      {/* Admin Actions - always visible at top */}
+                      <div className="flex flex-wrap gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                        <button
+                          onClick={() => verifyMutation.mutate(order.id)}
+                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        >
+                          ✓ Verify Payment
+                        </button>
+                        <button
+                          onClick={() => rejectMutation.mutate(order.id)}
+                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        >
+                          ✗ Reject Payment
+                        </button>
+                        <button
+                          onClick={() => statusMutation.mutate({ id: order.id, status: 'preparing' })}
+                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#d97706', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        >
+                          Start Preparing
+                        </button>
+                        <button
+                          onClick={() => statusMutation.mutate({ id: order.id, status: 'ready' })}
+                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        >
+                          Mark Ready
+                        </button>
+                        <button
+                          onClick={() => statusMutation.mutate({ id: order.id, status: 'out_for_delivery' })}
+                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        >
+                          Out for Delivery
+                        </button>
+                        <button
+                          onClick={() => statusMutation.mutate({ id: order.id, status: 'delivered' })}
+                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        >
+                          Mark Delivered
+                        </button>
+                        <button
+                          onClick={() => statusMutation.mutate({ id: order.id, status: 'cancelled' })}
+                          style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        >
+                          ✗ Cancel
+                        </button>
+                      </div>
+
                       {/* Customer & Address */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="bg-stone-50 dark:bg-stone-800 rounded-xl p-3">
@@ -210,47 +256,6 @@ export default function OrdersPage() {
                         </div>
                       )}
 
-                      {/* Admin Actions - always visible */}
-                      <div className="flex flex-wrap gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
-                        <Button
-                          size="sm"
-                          leftIcon={<Check size={14} />}
-                          onClick={() => verifyMutation.mutate(order.id)}
-                          isLoading={verifyMutation.isPending}
-                        >
-                          Verify Payment
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          leftIcon={<X size={14} />}
-                          onClick={() => rejectMutation.mutate(order.id)}
-                          isLoading={rejectMutation.isPending}
-                        >
-                          Reject Payment
-                        </Button>
-                        <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'preparing' })} isLoading={statusMutation.isPending}>
-                          Start Preparing
-                        </Button>
-                        <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'ready' })} isLoading={statusMutation.isPending}>
-                          Mark Ready
-                        </Button>
-                        <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'out_for_delivery' })} isLoading={statusMutation.isPending}>
-                          Out for Delivery
-                        </Button>
-                        <Button size="sm" variant="success" onClick={() => statusMutation.mutate({ id: order.id, status: 'delivered' })} isLoading={statusMutation.isPending}>
-                          Mark Delivered
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          leftIcon={<X size={14} />}
-                          onClick={() => statusMutation.mutate({ id: order.id, status: 'cancelled' })}
-                          isLoading={statusMutation.isPending}
-                        >
-                          Cancel Order
-                        </Button>
-                      </div>
                     </div>
                   </div>
                 )}
