@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Shield, Copy, CheckCircle2, Loader2, ArrowLeft, Phone, ChefHat, XCircle, Clock, Check } from 'lucide-react';
+import { Shield, Copy, CheckCircle2, Loader2, ArrowLeft, Phone, ChefHat, XCircle, Clock, Check, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { getOrderById, createOrderWithPayment, submitPayment, cancelOrder } from '../../services/orders';
+import { submitReview, getReviewForOrder } from '../../services/reviews';
 import { getAllSettings } from '../../services/settings';
 import { Button } from '../../components/ui/Button';
 import { OrderStatusBadge } from '../../components/common/OrderStatusBadge';
@@ -62,6 +63,16 @@ export default function PaymentPage() {
   const [cancelling, setCancelling] = useState(false);
   const [liveOrder, setLiveOrder] = useState<Order | null>(null);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  // Fetch existing review for delivered orders
+  const { data: existingReview } = useQuery({
+    queryKey: ['review', orderId],
+    queryFn: () => getReviewForOrder(orderId!),
+    enabled: !!orderId && (trackOrder?.status === 'delivered'),
+  });
 
   // Determine if we're in "create order" mode (no orderId) or "track order" mode
   const isCreateMode = !orderId;
@@ -176,6 +187,24 @@ export default function PaymentPage() {
       toast.error('Failed to cancel order. Please try again.');
       setCancelling(false);
     }
+  }
+
+  async function handleSubmitReview() {
+    if (!currentOrder || reviewRating === 0) return;
+    setSubmittingReview(true);
+    try {
+      await submitReview({
+        order_id: currentOrder.id,
+        user_id: currentOrder.user_id,
+        rating: reviewRating,
+        comment: reviewComment,
+      });
+      toast.success('Thank you for your review!');
+      queryClient.invalidateQueries({ queryKey: ['review', orderId] });
+    } catch {
+      toast.error('Failed to submit review. Please try again.');
+    }
+    setSubmittingReview(false);
   }
 
   // Loading state
@@ -477,9 +506,76 @@ export default function PaymentPage() {
                 <Phone size={16} />
               </button>
             </div>
+
+            {/* Review Section - shown after delivery */}
+            {currentStatus === 'delivered' && (
+              <ReviewForm
+                existingReview={existingReview as { rating: number; comment: string } | null}
+                rating={reviewRating}
+                onRatingChange={setReviewRating}
+                comment={reviewComment}
+                onCommentChange={setReviewComment}
+                onSubmit={handleSubmitReview}
+                isSubmitting={submittingReview}
+              />
+            )}
           </motion.div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Review Form Component ─────────────────────────────────────────────
+function ReviewForm({ existingReview, rating, onRatingChange, comment, onCommentChange, onSubmit, isSubmitting }: {
+  existingReview: { rating: number; comment: string } | null;
+  rating: number;
+  onRatingChange: (r: number) => void;
+  comment: string;
+  onCommentChange: (c: string) => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+}) {
+  if (existingReview) {
+    return (
+      <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-brand-primary/20 dark:border-stone-800 p-5 text-center">
+        <div className="flex items-center justify-center gap-1 mb-2">
+          {[1, 2, 3, 4, 5].map(s => (
+            <Star key={s} size={20} className={s <= existingReview.rating ? 'text-amber-500 fill-amber-500' : 'text-stone-200'} />
+          ))}
+        </div>
+        <p className="font-semibold text-stone-900 dark:text-stone-100 text-sm">Your Review</p>
+        {existingReview.comment && <p className="text-sm text-stone-500 mt-1">"{existingReview.comment}"</p>}
+        <p className="text-xs text-stone-400 mt-2">Thank you for your feedback!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-brand-primary/20 dark:border-stone-800 p-5">
+      <h3 className="font-playfair font-bold text-stone-900 dark:text-stone-100 mb-3">Rate Your Experience</h3>
+      <p className="text-xs text-stone-500 mb-3">How was your meal from Lo Ji Khao?</p>
+      <div className="flex items-center gap-1 mb-4">
+        {[1, 2, 3, 4, 5].map(s => (
+          <button key={s} type="button" onClick={() => onRatingChange(s)} className="p-0.5 transition-transform hover:scale-110">
+            <Star size={28} className={s <= rating ? 'text-amber-500 fill-amber-500' : 'text-stone-200 dark:text-stone-600'} />
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={comment}
+        onChange={e => onCommentChange(e.target.value)}
+        placeholder="Share your thoughts about the food..."
+        rows={2}
+        className="w-full border border-stone-200 dark:border-stone-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-amber-500 transition-colors bg-stone-50 dark:bg-stone-800 resize-none mb-3"
+      />
+      <button
+        onClick={onSubmit}
+        disabled={rating === 0 || isSubmitting}
+        className="w-full px-4 py-2.5 bg-amber-600 text-white text-sm font-semibold rounded-xl hover:bg-amber-700 disabled:bg-amber-300 disabled:cursor-not-allowed transition-colors"
+      >
+        {isSubmitting ? 'Submitting...' : 'Submit Review'}
+      </button>
     </div>
   );
 }
