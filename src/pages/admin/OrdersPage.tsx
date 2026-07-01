@@ -210,70 +210,46 @@ export default function OrdersPage() {
                         </div>
                       )}
 
-                      {/* Admin Actions */}
+                      {/* Admin Actions - always visible */}
                       <div className="flex flex-wrap gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
-                        {(order.status as string) === 'waiting_verification' && (
-                          <>
-                            <Button
-                              size="sm"
-                              leftIcon={<Check size={14} />}
-                              onClick={() => verifyMutation.mutate(order.id)}
-                              isLoading={verifyMutation.isPending}
-                            >
-                              Verify Payment
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="danger"
-                              leftIcon={<X size={14} />}
-                              onClick={() => rejectMutation.mutate(order.id)}
-                              isLoading={rejectMutation.isPending}
-                            >
-                              Reject Payment
-                            </Button>
-                          </>
-                        )}
-                        {(order.status as string) === 'payment_pending' && (
-                          <Button
-                            size="sm"
-                            leftIcon={<Check size={14} />}
-                            onClick={() => verifyMutation.mutate(order.id)}
-                            isLoading={verifyMutation.isPending}
-                          >
-                            Skip &amp; Accept Order
-                          </Button>
-                        )}
-                        {(order.status as string) === 'accepted' && (
-                          <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'preparing' })} isLoading={statusMutation.isPending}>
-                            Start Preparing
-                          </Button>
-                        )}
-                        {(order.status as string) === 'preparing' && (
-                          <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'ready' })} isLoading={statusMutation.isPending}>
-                            Mark Ready
-                          </Button>
-                        )}
-                        {(order.status as string) === 'ready' && (
-                          <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'out_for_delivery' })} isLoading={statusMutation.isPending}>
-                            Out for Delivery
-                          </Button>
-                        )}
-                        {(order.status as string) === 'out_for_delivery' && (
-                          <Button size="sm" variant="success" onClick={() => statusMutation.mutate({ id: order.id, status: 'delivered' })} isLoading={statusMutation.isPending}>
-                            Mark Delivered
-                          </Button>
-                        )}
-                        {!['delivered', 'cancelled'].includes(order.status as string) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            leftIcon={<X size={14} />}
-                            onClick={() => statusMutation.mutate({ id: order.id, status: 'cancelled' })}
-                            isLoading={statusMutation.isPending}
-                          >
-                            Cancel Order
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          leftIcon={<Check size={14} />}
+                          onClick={() => verifyMutation.mutate(order.id)}
+                          isLoading={verifyMutation.isPending}
+                        >
+                          Verify Payment
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          leftIcon={<X size={14} />}
+                          onClick={() => rejectMutation.mutate(order.id)}
+                          isLoading={rejectMutation.isPending}
+                        >
+                          Reject Payment
+                        </Button>
+                        <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'preparing' })} isLoading={statusMutation.isPending}>
+                          Start Preparing
+                        </Button>
+                        <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'ready' })} isLoading={statusMutation.isPending}>
+                          Mark Ready
+                        </Button>
+                        <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'out_for_delivery' })} isLoading={statusMutation.isPending}>
+                          Out for Delivery
+                        </Button>
+                        <Button size="sm" variant="success" onClick={() => statusMutation.mutate({ id: order.id, status: 'delivered' })} isLoading={statusMutation.isPending}>
+                          Mark Delivered
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          leftIcon={<X size={14} />}
+                          onClick={() => statusMutation.mutate({ id: order.id, status: 'cancelled' })}
+                          isLoading={statusMutation.isPending}
+                        >
+                          Cancel Order
+                        </Button>
                       </div>
                     </div>
                   </div>
