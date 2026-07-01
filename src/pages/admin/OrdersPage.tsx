@@ -167,6 +167,18 @@ export default function OrdersPage() {
       </motion.div>
 
       {/* Filters */}
+      <div style={{padding:'12px',background:'#fef2f2',border:'2px solid red',borderRadius:'12px',marginBottom:'12px',textAlign:'center'}}>
+        <strong style={{color:'#dc2626',fontSize:'16px'}}>TEST: Admin buttons should appear below each order card ↓</strong>
+        <div style={{marginTop:'8px',display:'flex',gap:'6px',flexWrap:'wrap',justifyContent:'center'}}>
+          <button style={{padding:'8px 16px',background:'#2563eb',color:'white',border:'none',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>✓ Verify Payment</button>
+          <button style={{padding:'8px 16px',background:'#059669',color:'white',border:'none',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>✓ Accept Order</button>
+          <button style={{padding:'8px 16px',background:'#ea580c',color:'white',border:'none',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>🍳 Start Preparing</button>
+          <button style={{padding:'8px 16px',background:'#7c3aed',color:'white',border:'none',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>📦 Mark Ready</button>
+          <button style={{padding:'8px 16px',background:'#4f46e5',color:'white',border:'none',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>🚚 Out for Delivery</button>
+          <button style={{padding:'8px 16px',background:'#10b981',color:'white',border:'none',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>✓ Mark Delivered</button>
+          <button style={{padding:'8px 16px',background:'#dc2626',color:'white',border:'none',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>✕ Cancel Order</button>
+        </div>
+      </div>
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
@@ -261,85 +273,30 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* ── Action Buttons (always visible) ──────────────────── */}
-              {isLive && (
-                <div className="px-4 pb-3 flex flex-wrap gap-1.5">
-                  {STATUS_BUTTONS.map(btn => {
-                    const stepIdx = STEP_INDEX[btn.key];
-                    const isActive = order.status === btn.key;
-                    const isPast = currentStep > stepIdx;
-                    const isNext = currentStep === stepIdx - 1;
-                    const canClick = isActive || isNext;
-
-                    if (isPast) return null;
-
-                    const handleClick = (e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      if (btn.key === 'delivered') {
-                        confirm.confirm(`Mark order ${order.order_number} as delivered?`, () =>
-                          statusMutation.mutate({ id: order.id, status: 'delivered' })
-                        );
-                        return;
-                      }
-                      if (btn.key === 'waiting_verification') {
-                        verifyMutation.mutate(order.id);
-                        return;
-                      }
-                      statusMutation.mutate({ id: order.id, status: btn.key });
-                    };
-
-                    const isLoading = btn.key === 'waiting_verification' ? verifyMutation.isPending : statusMutation.isPending;
-
-                    return (
-                      <button
-                        key={btn.key}
-                        onClick={handleClick}
-                        disabled={!canClick || isLoading}
-                        style={{
-                          padding: '5px 12px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          background: canClick ? btn.color : '#e5e7eb',
-                          color: canClick ? '#fff' : '#9ca3af',
-                          border: isActive ? `2px solid ${btn.color}` : 'none',
-                          borderRadius: '6px',
-                          cursor: canClick ? 'pointer' : 'not-allowed',
-                          opacity: canClick ? 1 : 0.5,
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {isLoading ? '...' : `${btn.icon} ${btn.label}`}
-                      </button>
-                    );
-                  })}
-
-                  {/* Cancel button */}
-                  {!isTerminal && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        confirm.confirm(`Cancel order ${order.order_number}? This cannot be undone.`, () =>
-                          cancelMutation.mutate(order.id)
-                        );
-                      }}
-                      disabled={cancelMutation.isPending}
-                      style={{
-                        padding: '5px 12px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        background: cancelMutation.isPending ? '#fca5a5' : '#fee2e2',
-                        color: '#dc2626',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {cancelMutation.isPending ? '...' : '✕ Cancel Order'}
-                    </button>
-                  )}
-                </div>
-              )}
+              {/* ── BOTTOM BUTTONS (always visible for EVERY order) ── */}
+              <div className="px-4 pb-3 flex flex-wrap gap-1.5">
+                <button onClick={(e) => { e.stopPropagation(); verifyMutation.mutate(order.id); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#2563eb',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                  ✓ Verify Payment
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'accepted' }); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#059669',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                  ✓ Accept Order
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'preparing' }); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#ea580c',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                  🍳 Start Preparing
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'ready' }); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#7c3aed',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                  📦 Mark Ready
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'out_for_delivery' }); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#4f46e5',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                  🚚 Out for Delivery
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'delivered' }); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#10b981',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                  ✓ Mark Delivered
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); cancelMutation.mutate(order.id); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#dc2626',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                  ✕ Cancel Order
+                </button>
+              </div>
 
               {/* ── Expanded details ──────────────────────────────────── */}
               {expandedOrder === order.id && (
