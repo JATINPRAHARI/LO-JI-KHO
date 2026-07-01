@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, Filter, Check, X, ChevronDown, ChevronUp, MapPin, Phone, User } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { getAllOrders, updateOrderStatus, verifyPayment, rejectPayment } from '../../services/orders';
 import { OrderStatusBadge } from '../../components/common/OrderStatusBadge';
@@ -149,15 +149,9 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              <AnimatePresence>
-                {expandedOrder === order.id && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="border-t border-stone-100 dark:border-stone-800"
-                  >
-                    <div className="p-4 space-y-4">
+              {expandedOrder === order.id && (
+                <div className="border-t border-stone-100 dark:border-stone-800">
+                  <div className="p-4 space-y-4">
                       {/* Customer & Address */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="bg-stone-50 dark:bg-stone-800 rounded-xl p-3">
@@ -282,9 +276,8 @@ export default function OrdersPage() {
                         )}
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
             </motion.div>
           );
         })}
