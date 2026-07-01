@@ -103,6 +103,7 @@ export default function OrdersPage() {
           </div>
         )}
         {filteredOrders?.map((order, i) => {
+          console.log('Order debug:', { id: order.id, status: order.status, order_number: order.order_number });
           const orderWithItems = order as Order & {
             order_items?: { name: string; quantity: number; price: number; is_veg: boolean; image_url: string }[];
             payments?: { status: string; upi_ref: string | null }[];
@@ -217,7 +218,7 @@ export default function OrdersPage() {
 
                       {/* Admin Actions */}
                       <div className="flex flex-wrap gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
-                        {order.status === 'waiting_verification' && (
+                        {(order.status as string) === 'waiting_verification' && (
                           <>
                             <Button
                               size="sm"
@@ -238,7 +239,7 @@ export default function OrdersPage() {
                             </Button>
                           </>
                         )}
-                        {order.status === 'payment_pending' && (
+                        {(order.status as string) === 'payment_pending' && (
                           <Button
                             size="sm"
                             leftIcon={<Check size={14} />}
@@ -248,27 +249,27 @@ export default function OrdersPage() {
                             Skip &amp; Accept Order
                           </Button>
                         )}
-                        {order.status === 'accepted' && (
+                        {(order.status as string) === 'accepted' && (
                           <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'preparing' })} isLoading={statusMutation.isPending}>
                             Start Preparing
                           </Button>
                         )}
-                        {order.status === 'preparing' && (
+                        {(order.status as string) === 'preparing' && (
                           <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'ready' })} isLoading={statusMutation.isPending}>
                             Mark Ready
                           </Button>
                         )}
-                        {order.status === 'ready' && (
+                        {(order.status as string) === 'ready' && (
                           <Button size="sm" onClick={() => statusMutation.mutate({ id: order.id, status: 'out_for_delivery' })} isLoading={statusMutation.isPending}>
                             Out for Delivery
                           </Button>
                         )}
-                        {order.status === 'out_for_delivery' && (
+                        {(order.status as string) === 'out_for_delivery' && (
                           <Button size="sm" variant="success" onClick={() => statusMutation.mutate({ id: order.id, status: 'delivered' })} isLoading={statusMutation.isPending}>
                             Mark Delivered
                           </Button>
                         )}
-                        {!['delivered', 'cancelled'].includes(order.status) && (
+                        {!['delivered', 'cancelled'].includes(order.status as string) && (
                           <Button
                             size="sm"
                             variant="outline"
