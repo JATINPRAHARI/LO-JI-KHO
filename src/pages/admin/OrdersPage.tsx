@@ -304,14 +304,14 @@ export default function OrdersPage() {
                             <button
                               onClick={(e) => { e.stopPropagation(); verifyMutation.mutate(order.id); }}
                               disabled={verifyMutation.isPending}
-                              style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, background: '#059669', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow-md hover:shadow-emerald-200/50 transition-all duration-200 active:scale-95 disabled:cursor-not-allowed"
                             >
                               {verifyMutation.isPending ? '...' : '✓ Approve Payment'}
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); rejectBox.open(order.id); }}
                               disabled={rejectWithReasonMutation.isPending}
-                              style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow-md hover:shadow-red-200/50 transition-all duration-200 active:scale-95 disabled:cursor-not-allowed"
                             >
                               {rejectWithReasonMutation.isPending ? '...' : '✕ Reject Payment'}
                             </button>
@@ -371,27 +371,48 @@ export default function OrdersPage() {
                       <span className="text-stone-900 dark:text-stone-100 font-bold">Total: <strong>₹{order.total_amount}</strong></span>
                     </div>
 
-                    {/* Admin Action Buttons (inside expanded view) */}
-                    <div className="flex flex-wrap gap-1.5 pt-2 border-t border-stone-100 dark:border-stone-800">
-                      <button onClick={(e) => { e.stopPropagation(); verifyMutation.mutate(order.id); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#2563eb',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                    {/* Admin Action Buttons */}
+                    <div className="flex flex-wrap gap-2 pt-3 border-t border-stone-100 dark:border-stone-800">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); verifyMutation.mutate(order.id); }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 active:scale-95"
+                      >
                         ✓ Verify Payment
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'accepted' }); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#059669',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'accepted' }); }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow-md hover:shadow-emerald-200/50 transition-all duration-200 active:scale-95"
+                      >
                         ✓ Accept Order
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'preparing' }); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#ea580c',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'preparing' }); }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow-md hover:shadow-orange-200/50 transition-all duration-200 active:scale-95"
+                      >
                         🍳 Start Preparing
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'ready' }); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#7c3aed',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'ready' }); }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow-md hover:shadow-violet-200/50 transition-all duration-200 active:scale-95"
+                      >
                         📦 Mark Ready
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'out_for_delivery' }); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#4f46e5',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'out_for_delivery' }); }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow-md hover:shadow-indigo-200/50 transition-all duration-200 active:scale-95"
+                      >
                         🚚 Out for Delivery
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'delivered' }); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#10b981',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: order.id, status: 'delivered' }); }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow-md hover:shadow-emerald-200/50 transition-all duration-200 active:scale-95"
+                      >
                         ✓ Mark Delivered
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); cancelMutation.mutate(order.id); }} style={{padding:'5px 12px',fontSize:'11px',fontWeight:600,background:'#dc2626',color:'white',border:'none',borderRadius:'6px',cursor:'pointer'}}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); cancelMutation.mutate(order.id); }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow-md hover:shadow-red-200/50 transition-all duration-200 active:scale-95"
+                      >
                         ✕ Cancel Order
                       </button>
                     </div>
@@ -472,13 +493,13 @@ function RejectReasonModal({ isOpen, orderId, onClose, onReject, isLoading }: {
           <button
             onClick={() => onReject(orderId, reason)}
             disabled={isLoading}
-            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: isLoading ? '#fca5a5' : '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', flex: 1 }}
+            className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white text-sm font-semibold rounded-xl transition-all duration-200 disabled:cursor-not-allowed flex-1"
           >
             {isLoading ? 'Rejecting...' : 'Reject Payment'}
           </button>
           <button
             onClick={onClose}
-            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+            className="px-5 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-400 text-sm font-semibold rounded-xl transition-all duration-200"
           >
             Cancel
           </button>
