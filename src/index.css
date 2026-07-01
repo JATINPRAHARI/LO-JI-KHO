@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #FFF8F0;
+    color: #1F2937;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer utilities {
+  .font-playfair {
+    font-family: 'Playfair Display', serif;
+  }
+  .font-inter {
+    font-family: 'Inter', sans-serif;
+  }
+  .bg-placeholder {
+    background: linear-gradient(135deg, #F97316 0%, #EAB308 100%);
+  }
+  .bg-placeholder-warm {
+    background: linear-gradient(135deg, #FB923C 0%, #FDE68A 100%);
+  }
+  .bg-placeholder-cool {
+    background: linear-gradient(135deg, #7DD3FC 0%, #BAE6FD 100%);
+  }
+  .bg-placeholder-rose {
+    background: linear-gradient(135deg, #FDA4AF 0%, #FECDD3 100%);
+  }
+  .bg-placeholder-green {
+    background: linear-gradient(135deg, #86EFAC 0%, #BBF7D0 100%);
+  }
+}
+
+* {
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FFF8F0;
+}
+::-webkit-scrollbar-thumb {
+  background: #F97316;
+  border-radius: 3px;
+}
