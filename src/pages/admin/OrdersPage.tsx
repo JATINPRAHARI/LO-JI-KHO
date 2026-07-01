@@ -7,7 +7,7 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
-import { getAllOrders, updateOrderStatus, verifyPayment, rejectPayment, cancelOrder } from '../../services/orders';
+import { getAllOrders, updateOrderStatus, verifyPayment, rejectPayment } from '../../services/orders';
 import { OrderStatusBadge } from '../../components/common/OrderStatusBadge';
 import { Modal } from '../../components/ui/Modal';
 import { formatDate } from '../../utils/formatters';
@@ -40,8 +40,6 @@ const STATUS_BUTTONS: {
   { key: 'out_for_delivery',      label: 'Out for Delivery', color: '#4f46e5', bg: '#eef2ff', hover: '#e0e7ff', icon: '🚚' },
   { key: 'delivered',             label: 'Mark Delivered',   color: '#10b981', bg: '#ecfdf5', hover: '#d1fae5', icon: '✓' },
 ];
-
-const CANCELLED_BUTTON = { key: 'cancelled' as OrderStatus, label: 'Cancel Order', color: '#dc2626', bg: '#fef2f2', hover: '#fee2e2', icon: '✕' };
 
 function getOrderStep(order: Order) {
   return STEP_INDEX[order.status as OrderStatus] ?? -1;
@@ -137,15 +135,6 @@ export default function OrdersPage() {
       toast.success('Payment rejected, customer notified');
     },
     onError: () => toast.error('Failed to reject payment'),
-  });
-
-  const cancelMutation = useMutation({
-    mutationFn: (id: string) => cancelOrder(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-      toast.success('Order cancelled');
-    },
-    onError: () => toast.error('Failed to cancel order'),
   });
 
   const confirm = useConfirm();
@@ -408,12 +397,6 @@ export default function OrdersPage() {
                         className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow-md hover:shadow-emerald-200/50 transition-all duration-200 active:scale-95"
                       >
                         ✓ Mark Delivered
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); cancelMutation.mutate(order.id); }}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow-md hover:shadow-red-200/50 transition-all duration-200 active:scale-95"
-                      >
-                        ✕ Cancel Order
                       </button>
                     </div>
                   </div>

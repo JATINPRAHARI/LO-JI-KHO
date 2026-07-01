@@ -13,6 +13,19 @@ import { Button } from '../../components/ui/Button';
 import type { MenuItem } from '../../types/database';
 
 function HeroSection() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    function check() {
+      const now = new Date();
+      const mins = now.getHours() * 60 + now.getMinutes();
+      setIsOpen((mins >= 11 * 60 && mins < 15 * 60) || (mins >= 19 * 60 && mins < 22 * 60));
+    }
+    check();
+    const id = setInterval(check, 60000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <section className="relative overflow-hidden">
       <div className="max-w-6xl mx-auto px-4 pt-24 pb-16 flex flex-col md:flex-row items-center gap-10">
@@ -22,9 +35,15 @@ function HeroSection() {
           transition={{ duration: 0.6 }}
           className="flex-1 space-y-6"
         >
-          <span className="inline-block border border-brand-primary text-brand-primary dark:text-brand-accent dark:border-brand-accent text-xs font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">
-            Premium Cloud Kitchen
-          </span>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="inline-block border border-brand-primary text-brand-primary dark:text-brand-accent dark:border-brand-accent text-xs font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">
+              Premium Cloud Kitchen
+            </span>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full ${isOpen ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+              <span className={`w-2 h-2 rounded-full ${isOpen ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+              {isOpen ? 'OPEN NOW' : 'CLOSED'}
+            </span>
+          </div>
           <h1 className="font-playfair text-5xl md:text-6xl lg:text-7xl font-bold text-brand-text dark:text-stone-100 leading-tight">
             Good Food.{' '}
             <span className="text-brand-primary dark:text-brand-accent">Good<br />Mood.</span>
@@ -44,6 +63,10 @@ function HeroSection() {
             <div className="flex items-center gap-1.5"><span className="text-green-500">&#x2714;</span> 30 min delivery</div>
             <div className="flex items-center gap-1.5"><span className="text-green-500">&#x2714;</span> 100% Vegetarian</div>
             <div className="flex items-center gap-1.5"><span className="text-green-500">&#x2714;</span> Fresh daily</div>
+          </div>
+          <div className="text-xs text-stone-500 dark:text-stone-400 space-y-0.5">
+            <p><span className="font-semibold text-stone-600 dark:text-stone-300">Today's Timings:</span></p>
+            <p>Lunch: 11:00 AM – 3:00 PM &nbsp;|&nbsp; Dinner: 7:00 PM – 10:00 PM</p>
           </div>
         </motion.div>
 
@@ -272,12 +295,12 @@ function ContactSection() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <div>
             <h2 className="font-playfair text-3xl font-bold mb-4">Visit or Call Us</h2>
-            <p className="text-stone-400 mb-6 leading-relaxed">We&apos;re a cloud kitchen based in Bandra, Mumbai. Order online and we&apos;ll deliver straight to you.</p>
+            <p className="text-stone-400 mb-6 leading-relaxed">We&apos;re a cloud kitchen. Order online and we&apos;ll deliver straight to you.</p>
             <dl className="space-y-3 text-sm">
               <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><MapPin size={14} /> Address</dt><dd className="text-stone-300">GANGA NAGAR MEERUT</dd></div>
               <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><Phone size={14} /> Phone</dt><dd className="text-stone-300">+91 79060 39087</dd></div>
               <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0">Email</dt><dd className="text-stone-300">nikitaprahri12@gmail.com</dd></div>
-              <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><Clock size={14} /> Hours</dt><dd className="text-stone-300">Mon&ndash;Sun: 10:00 AM &ndash; 11:00 PM</dd></div>
+              <div className="flex gap-3"><dt className="text-brand-accent w-24 shrink-0 flex items-center gap-1.5"><Clock size={14} /> Hours</dt><dd className="text-stone-300">Lunch: 11:00 AM – 3:00 PM &nbsp;|&nbsp; Dinner: 7:00 PM – 10:00 PM</dd></div>
             </dl>
           </div>
           <div className="bg-white/10 rounded-2xl overflow-hidden h-56 flex items-center justify-center border border-white/10">

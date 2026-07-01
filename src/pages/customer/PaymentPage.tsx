@@ -180,7 +180,7 @@ export default function PaymentPage() {
     if (!currentOrder) return;
     setCancelling(true);
     try {
-      await cancelOrder(currentOrder.id);
+      await cancelOrder(currentOrder.id, true);
       toast.success('Order cancelled.');
       navigate('/');
     } catch {

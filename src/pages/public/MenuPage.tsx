@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Leaf, ChevronRight, Award, Truck, Heart, Sparkles, Plus, Minus, Trash2 } from 'lucide-react';
+import { ShoppingCart, Leaf, ChevronRight, Award, Truck, Heart, Sparkles, Plus, Minus, Trash2, Clock } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
 import { getCategories, getMenuItems } from '../../services/menu';
 import type { MenuItem } from '../../types/database';
@@ -35,12 +35,13 @@ const itemAnim = {
   show: { opacity: 1, y: 0 },
 };
 
-function MenuItemRow({ item, index }: { item: MenuItem; index: number }) {
+function MenuItemRow({ item, index, disabled }: { item: MenuItem; index: number; disabled?: boolean }) {
   const { items, addItem, updateQuantity } = useCart();
   const cartItem = items.find(i => i.menuItem.id === item.id);
   const qty = cartItem?.quantity ?? 0;
 
   async function handleAdd() {
+    if (disabled) return;
     await addItem(item);
     toast.success(`${item.name} added to cart!`);
   }
@@ -48,7 +49,7 @@ function MenuItemRow({ item, index }: { item: MenuItem; index: number }) {
   return (
     <motion.div
       variants={itemAnim}
-      className="flex items-center justify-between py-3.5 border-b border-stone-100 dark:border-stone-800 last:border-b-0"
+      className={`flex items-center justify-between py-3.5 border-b border-stone-100 dark:border-stone-800 last:border-b-0 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
     >
       <div className="flex-1 min-w-0 pr-4">
         <div className="flex items-center gap-2">
@@ -91,8 +92,20 @@ function MenuItemRow({ item, index }: { item: MenuItem; index: number }) {
 
 export default function MenuPage() {
   const [activeCatSlug, setActiveCatSlug] = useState<string>('maggi');
+  const [isOpen, setIsOpen] = useState(true);
   const { totalItems, subtotal } = useCart();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    function check() {
+      const now = new Date();
+      const mins = now.getHours() * 60 + now.getMinutes();
+      setIsOpen((mins >= 11 * 60 && mins < 15 * 60) || (mins >= 19 * 60 && mins < 22 * 60));
+    }
+    check();
+    const id = setInterval(check, 60000);
+    return () => clearInterval(id);
+  }, []);
 
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: getCategories });
   const { data: allItems = [] } = useQuery({
@@ -152,6 +165,24 @@ export default function MenuPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-10">
+        {/* Closed Banner */}
+        {!isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 sm:p-6 text-center"
+          >
+            <div className="flex items-center justify-center gap-2 text-red-600 dark:text-red-400 mb-2">
+              <Clock size={18} />
+              <span className="font-bold text-sm">We are currently closed</span>
+            </div>
+            <p className="text-xs text-red-500 dark:text-red-400">
+              Ordering is available from:<br />
+              11:00 AM – 3:00 PM &nbsp;and&nbsp; 7:00 PM – 10:00 PM
+            </p>
+          </motion.div>
+        )}
+
         {/* Category Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
           {displayCats.map((cat, i) => (
@@ -226,7 +257,7 @@ export default function MenuPage() {
                     <p className="text-center text-stone-400 text-sm py-8">Loading menu items...</p>
                   )}
                   {filteredItems.map((item, idx) => (
-                    <MenuItemRow key={item.id} item={item} index={idx} />
+                    <MenuItemRow key={item.id} item={item} index={idx} disabled={!isOpen} />
                   ))}
                 </motion.div>
               </div>
@@ -289,8 +320,14 @@ export default function MenuPage() {
             className="fixed bottom-6 right-6 z-20"
           >
             <button
-              onClick={() => navigate('/checkout')}
-              className="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3.5 rounded-full font-semibold shadow-xl flex items-center gap-3 transition-all hover:shadow-2xl"
+              onClick={() => {
+                if (!isOpen) {
+                  toast.error('We are currently closed. Ordering is available from 11:00 AM – 3:00 PM and 7:00 PM – 10:00 PM.');
+                  return;
+                }
+                navigate('/checkout');
+              }}
+              className={`text-white px-6 py-3.5 rounded-full font-semibold shadow-xl flex items-center gap-3 transition-all hover:shadow-2xl ${!isOpen ? 'bg-stone-500 cursor-not-allowed' : 'bg-amber-800 hover:bg-amber-900'}`}
             >
               <ShoppingCart size={18} />
               <span>{totalItems} {totalItems === 1 ? 'Item' : 'Items'}</span>

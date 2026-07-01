@@ -25,6 +25,14 @@ export interface CreateOrderPayload {
 }
 
 export async function createOrder(payload: CreateOrderPayload, initialStatus: OrderStatus = 'payment_pending') {
+  // Server-side ordering hours validation
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const withinHours = (mins >= 11 * 60 && mins < 15 * 60) || (mins >= 19 * 60 && mins < 22 * 60);
+  if (!withinHours) {
+    throw new Error('Sorry, ordering is currently unavailable. Please order during our business hours.');
+  }
+
   const { items, ...orderData } = payload;
 
   const { data: order, error: orderError } = await supabase
@@ -188,7 +196,19 @@ export async function verifyPayment(orderId: string) {
   return updateOrderStatus(orderId, 'accepted');
 }
 
-export async function cancelOrder(orderId: string) {
+export async function cancelOrder(orderId: string, userInitiated = false) {
+  // If user-initiated, check that payment hasn't been submitted
+  if (userInitiated) {
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('status')
+      .eq('order_id', orderId)
+      .maybeSingle();
+    if (payment && payment.status !== 'failed') {
+      throw new Error('You can no longer cancel this order because payment has already been submitted.');
+    }
+  }
+
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .update({ status: 'cancelled', updated_at: new Date().toISOString() })
