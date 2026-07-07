@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Leaf, ChevronRight, Award, Truck, Heart, Sparkles, Plus, Minus, Trash2, Clock } from 'lucide-react';
+import { ShoppingCart, Leaf, ChevronRight, Truck, Heart, Sparkles, Plus, Minus, Trash2, Clock } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
 import { getCategories, getMenuItems } from '../../services/menu';
 import type { MenuItem } from '../../types/database';
@@ -24,11 +24,6 @@ const categoryMeta: Record<string, { emoji: string; image: string; note?: string
   pasta: { emoji: '🍝', image: 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=600', note: 'Only Sooji Pasta' },
   'cold-coffee': { emoji: '🧋', image: 'https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?auto=compress&cs=tinysrgb&w=600' },
 };
-
-const offers = [
-  { label: 'Order Above ₹209', discount: '₹10 OFF' },
-  { label: 'Order Above ₹309', discount: '1 FREE Cold Drink' },
-];
 
 const itemAnim = {
   hidden: { opacity: 0, y: 20 },
@@ -264,32 +259,6 @@ export default function MenuPage() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Offers */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mt-10 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-stone-900 dark:to-amber-950 rounded-3xl border border-amber-100 dark:border-amber-900/30 p-6 sm:p-8"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Award size={18} className="text-amber-600" />
-            <h3 className="font-playfair text-xl font-bold text-stone-800 dark:text-stone-200">Exclusive Offers</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {offers.map((offer) => (
-              <div
-                key={offer.label}
-                className="flex items-center justify-between bg-white dark:bg-stone-800 rounded-xl px-5 py-3.5 border border-amber-200/50 dark:border-amber-800/30"
-              >
-                <span className="text-sm font-semibold text-stone-700 dark:text-stone-300">{offer.label}</span>
-                <span className="text-sm font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">
-                  {offer.discount}
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
 
         {/* Footer */}
         <motion.div

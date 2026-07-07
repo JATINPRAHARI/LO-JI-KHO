@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Search, Filter, MapPin, Phone, User, Clock, AlertTriangle, Check, X,
+  Search, Filter, Navigation, MapPin, Phone, User, Clock, AlertTriangle, Check, X,
   ChevronDown, ChevronUp, Loader2, Image as ImageIcon, ExternalLink
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -321,6 +321,11 @@ export default function OrdersPage() {
                         <p className="text-sm text-stone-700 dark:text-stone-300">{order.delivery_address}</p>
                         {order.delivery_landmark && <p className="text-xs text-stone-400 mt-0.5">Near: {order.delivery_landmark}</p>}
                         {order.delivery_instructions && <p className="text-xs text-amber-600 mt-0.5">Note: {order.delivery_instructions}</p>}
+                        {order.delivery_distance != null && (
+                          <p className="text-xs text-stone-500 mt-1 flex items-center gap-1">
+                            <Navigation size={10} /> {order.delivery_distance} km from restaurant
+                          </p>
+                        )}
                       </div>
                       <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-3">
                         <p className="text-xs text-stone-400 uppercase tracking-wide mb-1.5 font-semibold flex items-center gap-1"><Clock size={12} /> Timing</p>

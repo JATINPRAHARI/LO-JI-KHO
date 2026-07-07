@@ -37,6 +37,7 @@ interface PendingOrderData {
   gst_amount: number;
   discount_amount: number;
   total_amount: number;
+  delivery_distance?: number;
   offer_code?: string;
   customer_name: string;
   customer_phone: string;

@@ -203,6 +203,7 @@ export interface Database {
           gst_amount: number;
           discount_amount: number;
           total_amount: number;
+          delivery_distance: number | null;
           offer_code: string | null;
           customer_name: string;
           customer_phone: string;
@@ -222,6 +223,7 @@ export interface Database {
           gst_amount: number;
           discount_amount?: number;
           total_amount: number;
+          delivery_distance?: number | null;
           offer_code?: string | null;
           customer_name: string;
           customer_phone: string;

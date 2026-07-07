@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { MapPin, Phone, User, Tag, X, Trash2, Plus, Minus, Navigation } from 'lucide-react';
+import { MapPin, Phone, User, X, Trash2, Plus, Minus, Navigation } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import { validateCoupon } from '../../services/offers';
 import { getAddresses } from '../../services/addresses';
 import { getAllSettings } from '../../services/settings';
 import { Input } from '../../components/ui/Input';
@@ -45,10 +44,6 @@ export default function CheckoutPage() {
   const { items, subtotal, clearCart, updateQuantity, removeItem } = useCart();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const [couponCode, setCouponCode] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const [appliedOffer, setAppliedOffer] = useState<string | null>(null);
-  const [couponLoading, setCouponLoading] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -70,8 +65,8 @@ export default function CheckoutPage() {
     defaultValues: { name: profile?.name ?? '', phone: profile?.phone ?? '' },
   });
 
-  const deliveryFee = 50;
-  const total = subtotal + deliveryFee - discount;
+  const deliveryFee = Number(settings?.delivery_fee ?? 40);
+  const total = subtotal + deliveryFee;
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -105,21 +100,6 @@ export default function CheckoutPage() {
     );
   }
 
-  async function handleApplyCoupon() {
-    if (!couponCode.trim()) return;
-    setCouponLoading(true);
-    try {
-      const result = await validateCoupon(couponCode, subtotal);
-      setDiscount(result.discount);
-      setAppliedOffer(result.offer.code);
-      toast.success(`Coupon applied! You save ₹${result.discount}`);
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Invalid coupon');
-    } finally {
-      setCouponLoading(false);
-    }
-  }
-
   function handleSelectAddress(addr: Address) {
     setSelectedAddress(addr.id);
     setValue('address_line', addr.address_line);
@@ -138,6 +118,7 @@ export default function CheckoutPage() {
       }
 
       // Validate delivery location
+      let delivery_distance = 0;
       if (settings?.delivery_lat && settings?.delivery_lng && settings?.delivery_radius_km) {
         if (!userLocation) {
           toast.error('Unable to verify your location. Please enable GPS and reload.');
@@ -146,9 +127,9 @@ export default function CheckoutPage() {
         const restaurantLat = Number(settings.delivery_lat);
         const restaurantLng = Number(settings.delivery_lng);
         const maxRadius = Number(settings.delivery_radius_km);
-        const distance = getDistanceFromLatLngInKm(restaurantLat, restaurantLng, userLocation.lat, userLocation.lng);
-        if (distance > maxRadius) {
-          toast.error(`Sorry, we only deliver within ${maxRadius} km of our location. Your distance is ${distance.toFixed(1)} km.`);
+        delivery_distance = Number(getDistanceFromLatLngInKm(restaurantLat, restaurantLng, userLocation.lat, userLocation.lng).toFixed(1));
+        if (delivery_distance > maxRadius) {
+          toast.error(`Sorry, we only deliver within ${maxRadius} km of our location. Your distance is ${delivery_distance} km.`);
           return;
         }
       }
@@ -159,9 +140,8 @@ export default function CheckoutPage() {
         subtotal,
         delivery_fee: deliveryFee,
         gst_amount: 0,
-        discount_amount: discount,
         total_amount: total,
-        offer_code: appliedOffer ?? undefined,
+        delivery_distance,
         customer_name: data.name,
         customer_phone: data.phone,
         delivery_address: data.address_line,
@@ -287,32 +267,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Coupon */}
-              <div className="bg-white dark:bg-stone-900 rounded-2xl p-5 shadow-sm border border-stone-100 dark:border-stone-800">
-                <h3 className="font-semibold text-stone-900 dark:text-stone-100 text-sm mb-3 flex items-center gap-2">
-                  <Tag size={15} className="text-amber-600" /> Apply Coupon
-                </h3>
-                {appliedOffer ? (
-                  <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-3 py-2">
-                    <span className="text-sm text-green-700 dark:text-green-400 font-semibold">{appliedOffer} applied &bull; &#x20B9;{discount} off</span>
-                    <button type="button" onClick={() => { setAppliedOffer(null); setDiscount(0); setCouponCode(''); }}>
-                      <X size={14} className="text-green-600" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={couponCode}
-                      onChange={e => setCouponCode(e.target.value.toUpperCase())}
-                      placeholder="Enter coupon code"
-                      className="flex-1 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-amber-500 transition-colors"
-                    />
-                    <Button type="button" variant="outline" size="sm" isLoading={couponLoading} onClick={handleApplyCoupon}>Apply</Button>
-                  </div>
-                )}
-              </div>
-
               {/* Bill */}
               <div className="bg-white dark:bg-stone-900 rounded-2xl p-5 shadow-sm border border-stone-100 dark:border-stone-800">
                 <div className="space-y-2 text-sm">
@@ -324,12 +278,6 @@ export default function CheckoutPage() {
                     <span>Delivery Fee</span>
                     <span>&#x20B9;{deliveryFee}</span>
                   </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-green-600 dark:text-green-400">
-                      <span>Discount</span>
-                      <span>-&#x20B9;{discount}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between font-bold text-stone-900 dark:text-stone-100 pt-2 border-t border-stone-100 dark:border-stone-800 text-base">
                     <span>Grand Total</span>
                     <span>&#x20B9;{total}</span>
