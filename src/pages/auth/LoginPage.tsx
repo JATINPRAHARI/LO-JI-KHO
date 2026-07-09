@@ -3,13 +3,14 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Mail, Lock, UtensilsCrossed, ChefHat, Star, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, UtensilsCrossed, ChefHat, Star, ArrowRight, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { signIn } from '../../services/auth';
+import { checkRateLimit, incrementRateLimit, resetRateLimit } from '../../utils/security';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -31,11 +32,18 @@ export default function LoginPage() {
   });
 
   async function onSubmit(data: FormData) {
+    const rateCheck = checkRateLimit(`login_${data.email}`);
+    if (!rateCheck.allowed) {
+      toast.error(`Too many attempts. Try again in ${Math.ceil(rateCheck.resetInMs / 60000)} minutes.`);
+      return;
+    }
     try {
       await signIn(data.email, data.password);
+      resetRateLimit(`login_${data.email}`);
       toast.success('Welcome back!');
       navigate(from, { replace: true });
     } catch (err: unknown) {
+      incrementRateLimit(`login_${data.email}`);
       const msg = err instanceof Error ? err.message : 'Login failed';
       toast.error(msg.includes('Invalid') ? 'Invalid email or password' : msg);
     }

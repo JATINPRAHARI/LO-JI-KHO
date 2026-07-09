@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Shield, Copy, CheckCircle2, Loader2, ArrowLeft, Instagram, ChefHat, XCircle, Clock, Check, Star } from 'lucide-react';
+import { Shield, Copy, CheckCircle2, Loader2, ArrowLeft, Instagram, ChefHat, XCircle, Clock, Check, Star, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { getOrderById, createOrderWithPayment, submitPayment, cancelOrder } from '../../services/orders';
 import { submitReview, getReviewForOrder } from '../../services/reviews';
 import { getAllSettings } from '../../services/settings';
+import { verifyOrderIntegrity, getCsrfToken } from '../../utils/security';
 import { Button } from '../../components/ui/Button';
 import { OrderStatusBadge } from '../../components/common/OrderStatusBadge';
 import { iconForItem } from '../../utils/iconForItem';
@@ -91,15 +92,24 @@ export default function PaymentPage() {
   const defaultQrImage = "/images/WhatsApp Image 2026-06-30 at 2.07.38 PM.jpeg";
   const upiQrUrl = settings?.upi_qr_url || defaultQrImage;
 
-  // Get pending order from sessionStorage (create mode)
+  // Get pending order from sessionStorage (create mode) with integrity check
   const [pendingOrder, setPendingOrder] = useState<PendingOrderData | null>(null);
+  const [integrityError, setIntegrityError] = useState(false);
 
   useEffect(() => {
     if (isCreateMode) {
       const stored = sessionStorage.getItem('pendingOrder');
       if (stored) {
         try {
-          setPendingOrder(JSON.parse(stored));
+          if (!verifyOrderIntegrity(stored)) {
+            setIntegrityError(true);
+            sessionStorage.removeItem('pendingOrder');
+            toast.error('Order data integrity check failed. Please start again.');
+            return;
+          }
+          const parsed = JSON.parse(stored);
+          const { _checksum, ...cleanData } = parsed;
+          setPendingOrder(cleanData);
         } catch {
           setPendingOrder(null);
         }
@@ -212,6 +222,20 @@ export default function PaymentPage() {
   if (orderLoading && !isCreateMode) return (
     <div className="pt-20 min-h-screen flex items-center justify-center bg-brand-bg dark:bg-stone-950">
       <Loader2 size={32} className="text-brand-primary animate-spin" />
+    </div>
+  );
+
+  // Integrity check failed
+  if (integrityError) return (
+    <div className="pt-20 min-h-screen flex items-center justify-center bg-brand-bg dark:bg-stone-950">
+      <div className="text-center max-w-md">
+        <AlertTriangle size={48} className="mx-auto mb-4 text-red-500" />
+        <h2 className="font-playfair text-2xl font-bold text-stone-900 dark:text-stone-100 mb-2">Order Data Error</h2>
+        <p className="text-stone-500 dark:text-stone-400 mb-6 text-sm">
+          Your order information appears to have been tampered with. For security, we've cleared it. Please add items to your cart again.
+        </p>
+        <Button onClick={() => navigate('/menu')}>Go to Menu</Button>
+      </div>
     </div>
   );
 

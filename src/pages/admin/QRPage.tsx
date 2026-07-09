@@ -11,6 +11,8 @@ import { getAllSettings, updateSetting } from '../../services/settings';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { useAuth } from '../../contexts/AuthContext';
+import { logAdminAction } from '../../services/audit';
 
 const schema = z.object({
   upi_id: z.string().min(5, 'UPI ID required').regex(/^[\w.-]+@[\w]+$/, 'Invalid UPI ID format'),
@@ -30,6 +32,7 @@ export default function QRPage() {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: settings, isLoading } = useQuery({ queryKey: ['settings'], queryFn: getAllSettings });
 
@@ -62,6 +65,14 @@ export default function QRPage() {
   });
 
   async function onSubmit(data: FormData) {
+    const changedKeys: string[] = [];
+    if (data.upi_id !== settings?.upi_id) changedKeys.push('upi_id');
+    if (String(data.delivery_fee) !== settings?.delivery_fee) changedKeys.push('delivery_fee');
+    if (String(data.gst_percent) !== settings?.gst_percent) changedKeys.push('gst_percent');
+    if (String(data.delivery_lat) !== settings?.delivery_lat) changedKeys.push('delivery_lat');
+    if (String(data.delivery_lng) !== settings?.delivery_lng) changedKeys.push('delivery_lng');
+    if (String(data.delivery_radius_km) !== settings?.delivery_radius_km) changedKeys.push('delivery_radius_km');
+
     await Promise.all([
       saveMutation.mutateAsync({ key: 'upi_id', value: data.upi_id }),
       saveMutation.mutateAsync({ key: 'upi_qr_url', value: data.upi_qr_url }),
@@ -72,6 +83,15 @@ export default function QRPage() {
       saveMutation.mutateAsync({ key: 'delivery_lng', value: String(data.delivery_lng) }),
       saveMutation.mutateAsync({ key: 'delivery_radius_km', value: String(data.delivery_radius_km) }),
     ]);
+
+    if (changedKeys.length > 0) {
+      await logAdminAction({
+        admin_id: user?.id,
+        action: 'update_settings',
+        entity_type: 'settings',
+        details: { changed_keys: changedKeys },
+      });
+    }
   }
 
   async function handleCopyUpi() {

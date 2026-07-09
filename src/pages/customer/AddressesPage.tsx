@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MapPin, Plus, Trash2, Home, Briefcase, Star } from 'lucide-react';
+import { MapPin, Plus, Trash2, Home, Briefcase, Star, Navigation, Crosshair } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { getAddresses, createAddress, deleteAddress, setDefaultAddress } from '../../services/addresses';
+import { getAllSettings } from '../../services/settings';
+import { isWithinDeliveryRadius, getDeliveryInfoMessage } from '../../utils/delivery';
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { Button } from '../../components/ui/Button';
@@ -21,6 +23,8 @@ const schema = z.object({
   city: z.string().min(2, 'City required'),
   pincode: z.string().regex(/^\d{6}$/, 'Enter valid 6-digit pincode'),
   is_default: z.boolean().optional(),
+  latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+  longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -32,12 +36,15 @@ const labelIcons: Record<string, React.ReactNode> = {
 
 export default function AddressesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [detectingGps, setDetectingGps] = useState(false);
+  const [gpsDetected, setGpsDetected] = useState<{ lat: number; lng: number } | null>(null);
   const queryClient = useQueryClient();
   const { data: addresses, isLoading } = useQuery({ queryKey: ['addresses'], queryFn: getAddresses });
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: getAllSettings });
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { label: 'Home', city: 'Mumbai', is_default: false },
+    defaultValues: { label: 'Home', city: 'Meerut', is_default: false, latitude: null, longitude: null },
   });
 
   const deleteMutation = useMutation({
@@ -51,12 +58,48 @@ export default function AddressesPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['addresses'] }); toast.success('Default address updated'); },
   });
 
+  async function detectGps() {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation not supported on this device');
+      return;
+    }
+    setDetectingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const lat = parseFloat(pos.coords.latitude.toFixed(7));
+        const lng = parseFloat(pos.coords.longitude.toFixed(7));
+        setGpsDetected({ lat, lng });
+        setValue('latitude', lat);
+        setValue('longitude', lng);
+        setDetectingGps(false);
+        toast.success('GPS location captured for delivery verification');
+      },
+      () => {
+        setDetectingGps(false);
+        toast.error('Could not detect location. Enable GPS and try again.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
+
+  function getDeliveryStatus(addr: { latitude?: number | null; longitude?: number | null }) {
+    if (!addr.latitude || !addr.longitude || !settings?.delivery_lat || !settings?.delivery_lng) return null;
+    const result = isWithinDeliveryRadius(
+      addr.latitude, addr.longitude,
+      Number(settings.delivery_lat), Number(settings.delivery_lng),
+      Number(settings.delivery_radius_km ?? 5),
+    );
+    const info = getDeliveryInfoMessage(result.distance, result.maxRadius);
+    return { ...result, message: info.message, type: info.type };
+  }
+
   async function onSubmit(data: FormData) {
     try {
       await createAddress(data);
       queryClient.invalidateQueries({ queryKey: ['addresses'] });
       toast.success('Address added!');
       reset();
+      setGpsDetected(null);
       setIsModalOpen(false);
     } catch {
       toast.error('Failed to add address.');
@@ -109,6 +152,15 @@ export default function AddressesPage() {
                       <p className="text-sm text-stone-600 dark:text-stone-400 mt-0.5">{addr.address_line}</p>
                       {addr.landmark && <p className="text-xs text-stone-400 mt-0.5">Near {addr.landmark}</p>}
                       <p className="text-xs text-stone-400">{addr.city} {addr.pincode && `- ${addr.pincode}`}</p>
+                      {(() => {
+                        const ds = getDeliveryStatus(addr);
+                        return ds ? (
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold mt-1.5 ${ds.within ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                            <Navigation size={10} />
+                            {ds.distance} km {ds.within ? '(In delivery zone)' : '(Outside delivery zone)'}
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -145,9 +197,38 @@ export default function AddressesPage() {
             <Textarea label="Full Address" placeholder="Building, street, area..." rows={3} error={errors.address_line?.message} {...register('address_line')} />
             <Input label="Landmark (optional)" placeholder="Near XYZ" {...register('landmark')} />
             <div className="grid grid-cols-2 gap-3">
-              <Input label="City" placeholder="Mumbai" error={errors.city?.message} {...register('city')} />
-              <Input label="Pincode" placeholder="400050" error={errors.pincode?.message} {...register('pincode')} />
+              <Input label="City" placeholder="Meerut" error={errors.city?.message} {...register('city')} />
+              <Input label="Pincode" placeholder="250001" error={errors.pincode?.message} {...register('pincode')} />
             </div>
+
+            {/* GPS Location Capture */}
+            <div className="border border-stone-200 dark:border-stone-700 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-stone-700 dark:text-stone-300 flex items-center gap-2">
+                  <MapPin size={14} className="text-amber-600" /> Delivery Location (GPS)
+                </p>
+                <button
+                  type="button"
+                  onClick={detectGps}
+                  disabled={detectingGps}
+                  className="text-xs flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-semibold hover:underline disabled:opacity-50"
+                >
+                  <Crosshair size={12} className={detectingGps ? 'animate-spin' : ''} />
+                  {detectingGps ? 'Detecting...' : 'Detect My Location'}
+                </button>
+              </div>
+              {gpsDetected ? (
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 text-xs text-green-700 dark:text-green-400">
+                  <p>Latitude: {gpsDetected.lat}</p>
+                  <p>Longitude: {gpsDetected.lng}</p>
+                </div>
+              ) : (
+                <p className="text-xs text-stone-400">GPS location helps us verify delivery eligibility. Optional but recommended.</p>
+              )}
+              <input type="hidden" {...register('latitude')} />
+              <input type="hidden" {...register('longitude')} />
+            </div>
+
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" {...register('is_default')} className="rounded border-stone-300" />
               <span className="text-sm text-stone-700 dark:text-stone-300">Set as default address</span>

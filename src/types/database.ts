@@ -128,10 +128,12 @@ export interface Database {
           user_id: string;
           label: string;
           address_line: string;
-          landmark: string;
+          landmark: string | null;
           city: string;
           pincode: string;
           is_default: boolean;
+          latitude: number | null;
+          longitude: number | null;
           created_at: string;
         };
         Insert: {
@@ -139,18 +141,22 @@ export interface Database {
           user_id?: string;
           label?: string;
           address_line: string;
-          landmark?: string;
+          landmark?: string | null;
           city?: string;
           pincode?: string;
           is_default?: boolean;
+          latitude?: number | null;
+          longitude?: number | null;
         };
         Update: {
           label?: string;
           address_line?: string;
-          landmark?: string;
+          landmark?: string | null;
           city?: string;
           pincode?: string;
           is_default?: boolean;
+          latitude?: number | null;
+          longitude?: number | null;
         };
       };
       offers: {

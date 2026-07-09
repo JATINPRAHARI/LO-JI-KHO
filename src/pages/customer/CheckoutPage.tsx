@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { MapPin, Phone, User, X, Trash2, Plus, Minus, Navigation } from 'lucide-react';
+import { MapPin, Phone, User, X, Trash2, Plus, Minus, Navigation, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +12,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { getAddresses } from '../../services/addresses';
 import { getAllSettings } from '../../services/settings';
+import { isWithinDeliveryRadius } from '../../utils/delivery';
+import { sanitizeOrderData, generateOrderChecksum, getCsrfToken } from '../../utils/security';
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { Button } from '../../components/ui/Button';
@@ -19,17 +21,6 @@ import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { iconForItem } from '../../utils/iconForItem';
 import type { Address } from '../../types/database';
-
-function getDistanceFromLatLngInKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
 
 const schema = z.object({
   name: z.string().min(2, 'Name required'),
@@ -117,25 +108,27 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Validate delivery location
+      // Validate delivery location using shared utility
       let delivery_distance = 0;
       if (settings?.delivery_lat && settings?.delivery_lng && settings?.delivery_radius_km) {
         if (!userLocation) {
           toast.error('Unable to verify your location. Please enable GPS and reload.');
           return;
         }
-        const restaurantLat = Number(settings.delivery_lat);
-        const restaurantLng = Number(settings.delivery_lng);
-        const maxRadius = Number(settings.delivery_radius_km);
-        delivery_distance = Number(getDistanceFromLatLngInKm(restaurantLat, restaurantLng, userLocation.lat, userLocation.lng).toFixed(1));
-        if (delivery_distance > maxRadius) {
-          toast.error(`Sorry, we only deliver within ${maxRadius} km of our location. Your distance is ${delivery_distance} km.`);
+        const { within, distance, maxRadius } = isWithinDeliveryRadius(
+          userLocation.lat, userLocation.lng,
+          Number(settings.delivery_lat), Number(settings.delivery_lng),
+          Number(settings.delivery_radius_km),
+        );
+        delivery_distance = distance;
+        if (!within) {
+          toast.error(`Sorry, we only deliver within ${maxRadius} km of F-259 Ganga Nagar, Meerut. Your distance is ${distance} km.`);
           return;
         }
       }
 
-      // Save order data to sessionStorage for payment page to pick up
-      const orderData = {
+      // Sanitize and secure order data with integrity checksum
+      const rawOrderData = {
         user_id: user?.id ?? null,
         subtotal,
         delivery_fee: deliveryFee,
@@ -147,6 +140,7 @@ export default function CheckoutPage() {
         delivery_address: data.address_line,
         delivery_landmark: data.landmark,
         delivery_instructions: data.delivery_instructions,
+        _csrf: getCsrfToken(),
         items: items.map(i => ({
           menu_item_id: i.menuItem.id,
           name: i.menuItem.name,
@@ -156,7 +150,11 @@ export default function CheckoutPage() {
           is_veg: i.menuItem.is_veg,
         })),
       };
-      sessionStorage.setItem('pendingOrder', JSON.stringify(orderData));
+      const sanitizedOrder = sanitizeOrderData(rawOrderData) as Record<string, unknown>;
+      const orderPayload = { ...sanitizedOrder };
+      delete (orderPayload as Record<string, unknown>)._csrf;
+      const checksum = generateOrderChecksum(JSON.stringify(orderPayload));
+      sessionStorage.setItem('pendingOrder', JSON.stringify({ ...orderPayload, _checksum: checksum }));
       await clearCart();
       navigate('/payment');
     } catch (err) {

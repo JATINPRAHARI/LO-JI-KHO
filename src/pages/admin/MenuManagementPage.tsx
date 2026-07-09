@@ -15,6 +15,8 @@ import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
 import type { MenuItem } from '../../types/database';
 import { usePageTitle } from '../../../hooks/usePageTitle';
+import { useAuth } from '../../contexts/AuthContext';
+import { logAdminAction } from '../../services/audit';
 
 const schema = z.object({
   name: z.string().min(2, 'Name required'),
@@ -43,6 +45,7 @@ export default function MenuManagementPage() {
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: items, isLoading } = useQuery({ queryKey: ['admin-menu'], queryFn: getAllMenuItems });
   const { data: categories } = useQuery({ queryKey: ['all-categories'], queryFn: getAllCategories });
@@ -120,9 +123,22 @@ export default function MenuManagementPage() {
 
   async function onSubmit(data: FormData) {
     if (editingItem) {
-      await updateMutation.mutateAsync({ id: editingItem.id, data });
+      const updated = await updateMutation.mutateAsync({ id: editingItem.id, data });
+      await logAdminAction({
+        admin_id: user?.id,
+        action: 'update_menu_item',
+        entity_type: 'menu_items',
+        entity_id: editingItem.id,
+        details: { name: data.name },
+      });
     } else {
-      await createMutation.mutateAsync(data as never);
+      const created = await createMutation.mutateAsync(data as never);
+      await logAdminAction({
+        admin_id: user?.id,
+        action: 'create_menu_item',
+        entity_type: 'menu_items',
+        details: { name: data.name },
+      });
     }
   }
 

@@ -9,11 +9,14 @@ import { Button } from '../../components/ui/Button';
 import { formatDate } from '../../utils/formatters';
 import type { Order, OrderStatus } from '../../types/database';
 import { usePageTitle } from '../../../hooks/usePageTitle';
+import { useAuth } from '../../contexts/AuthContext';
+import { logAdminAction } from '../../services/audit';
 
 const KITCHEN_STATUSES: OrderStatus[] = ['waiting_verification', 'accepted', 'preparing', 'ready', 'out_for_delivery'];
 
 export default function KitchenPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ['kitchen-orders'],
@@ -30,7 +33,17 @@ export default function KitchenPage() {
   };
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: OrderStatus }) => updateOrderStatus(id, status),
+    mutationFn: async ({ id, status }: { id: string; status: OrderStatus }) => {
+      const order = await updateOrderStatus(id, status);
+      await logAdminAction({
+        admin_id: user?.id,
+        action: 'update_order_status',
+        entity_type: 'orders',
+        entity_id: id,
+        details: { new_status: status, order_number: order.order_number },
+      });
+      return order;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kitchen-orders'] });
       toast.success('Order updated');
@@ -39,7 +52,17 @@ export default function KitchenPage() {
   });
 
   const verifyMutation = useMutation({
-    mutationFn: (id: string) => verifyPayment(id),
+    mutationFn: async (id: string) => {
+      const order = await verifyPayment(id);
+      await logAdminAction({
+        admin_id: user?.id,
+        action: 'verify_payment',
+        entity_type: 'payments',
+        entity_id: id,
+        details: { order_number: order.order_number },
+      });
+      return order;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kitchen-orders'] });
       toast.success('Payment verified');
