@@ -32,7 +32,7 @@ export function NotificationBell() {
   useEffect(() => {
     if (!user) return;
 
-    notifService.getNotifications().then(data => {
+    notifService.getNotifications(user.id).then(data => {
       setNotifications(data as Notification[]);
       setUnreadCount(data.filter(n => !n.is_read).length);
     });

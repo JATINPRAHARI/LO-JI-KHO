@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { createAdminNotification } from './notifications';
 import type { OrderStatus } from '../types/database';
 
 export interface CreateOrderPayload {
@@ -47,7 +48,7 @@ export async function createOrder(payload: CreateOrderPayload, initialStatus: Or
   const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
   if (itemsError) throw itemsError;
 
-  // Only insert notification if user_id exists (logged-in users)
+  // Notify user
   if (order.user_id) {
     await supabase.from('notifications').insert({
       user_id: order.user_id,
@@ -59,6 +60,14 @@ export async function createOrder(payload: CreateOrderPayload, initialStatus: Or
       order_id: order.id,
     });
   }
+
+  // Notify admin about the new order
+  await createAdminNotification(
+    'New Order Received!',
+    `Order ${order.order_number} placed by ${order.customer_name || 'Guest'} for ₹${order.total_amount}.`,
+    'order_received',
+    order.id,
+  );
 
   return order;
 }
@@ -128,13 +137,22 @@ export async function submitPayment(orderId: string, amount: number, upiRef?: st
     .single();
   if (orderError) throw orderError;
 
-  await supabase.from('notifications').insert({
-    user_id: order.user_id,
-    title: 'Payment Submitted',
-    message: `Payment for order ${order.order_number} is under verification. We'll confirm shortly!`,
-    type: 'payment_pending',
-    order_id: orderId,
-  });
+  if (order.user_id) {
+    await supabase.from('notifications').insert({
+      user_id: order.user_id,
+      title: 'Payment Submitted',
+      message: `Payment for order ${order.order_number} is under verification. We'll confirm shortly!`,
+      type: 'payment_pending',
+      order_id: orderId,
+    });
+  }
+
+  await createAdminNotification(
+    'Payment Pending Verification',
+    `Payment of ₹${amount} for order ${order.order_number} needs verification.`,
+    'payment_pending',
+    orderId,
+  );
 
   return payment;
 }
@@ -175,24 +193,49 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
 
   const notif = statusMessages[status];
   if (notif) {
-    await supabase.from('notifications').insert({
-      user_id: order.user_id,
-      title: notif.title,
-      message: notif.message,
-      type: notif.type as never,
-      order_id: orderId,
-    });
+    if (order.user_id) {
+      await supabase.from('notifications').insert({
+        user_id: order.user_id,
+        title: notif.title,
+        message: notif.message,
+        type: notif.type as never,
+        order_id: orderId,
+      });
+    }
+
+    if (status === 'cancelled') {
+      await createAdminNotification(
+        'Order Cancelled',
+        `Order ${order.order_number} has been cancelled.`,
+        'cancelled',
+        orderId,
+      );
+    }
   }
 
   return order;
 }
 
 export async function verifyPayment(orderId: string) {
+  const { data: order, error: orderFetchError } = await supabase
+    .from('orders')
+    .select('order_number, total_amount')
+    .eq('id', orderId)
+    .single();
+  if (orderFetchError) throw orderFetchError;
+
   const { error: paymentError } = await supabase
     .from('payments')
     .update({ status: 'verified', verified_at: new Date().toISOString() })
     .eq('order_id', orderId);
   if (paymentError) throw paymentError;
+
+  await createAdminNotification(
+    'Payment Verified',
+    `Payment of ₹${order.total_amount} for order ${order.order_number} has been verified. Order is now accepted.`,
+    'accepted',
+    orderId,
+  );
 
   return updateOrderStatus(orderId, 'accepted');
 }
@@ -218,13 +261,22 @@ export async function cancelOrder(orderId: string, userInitiated = false) {
     .single();
   if (orderError) throw orderError;
 
-  await supabase.from('notifications').insert({
-    user_id: order.user_id,
-    title: 'Order Cancelled',
-    message: `Your order ${order.order_number} has been cancelled. If payment was made, refund will be processed within 3-5 business days.`,
-    type: 'cancelled',
-    order_id: orderId,
-  });
+  if (order.user_id) {
+    await supabase.from('notifications').insert({
+      user_id: order.user_id,
+      title: 'Order Cancelled',
+      message: `Your order ${order.order_number} has been cancelled. If payment was made, refund will be processed within 3-5 business days.`,
+      type: 'cancelled',
+      order_id: orderId,
+    });
+  }
+
+  await createAdminNotification(
+    'Order Cancelled by Customer',
+    `Order ${order.order_number} has been cancelled by the customer.`,
+    'cancelled',
+    orderId,
+  );
 
   return order;
 }
@@ -245,13 +297,24 @@ export async function rejectPayment(orderId: string, reason?: string) {
   if (orderError) throw orderError;
 
   const rejectMsg = reason ? ` Reason: ${reason}` : '';
-  await supabase.from('notifications').insert({
-    user_id: order.user_id,
-    title: 'Payment Rejected',
-    message: `Your payment for order ${order.order_number} was not verified.${rejectMsg} Please try again with a valid UPI transaction.`,
-    type: 'payment_pending',
-    order_id: orderId,
-  });
+  if (order.user_id) {
+    await supabase.from('notifications').insert({
+      user_id: order.user_id,
+      title: 'Payment Rejected',
+      message: `Your payment for order ${order.order_number} was not verified.${rejectMsg} Please try again with a valid UPI transaction.`,
+      type: 'payment_pending',
+      order_id: orderId,
+    });
+  }
+
+  if (reason) {
+    await createAdminNotification(
+      'Payment Rejected',
+      `Payment for order ${order.order_number} was rejected.${rejectMsg}`,
+      'info',
+      orderId,
+    );
+  }
 
   return order;
 }
