@@ -3,12 +3,12 @@ import { useCallback, useRef, useEffect } from 'react';
 // Singleton AudioContext that gets "unlocked" on first user interaction
 let audioCtx: AudioContext | null = null;
 let audioUnlocked = false;
+const NOTIF_URL = '/mixkit-bell-notification-933.wav';
 
 function unlockAudio() {
   if (audioUnlocked) return;
   try {
     audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    // Play silent buffer to unlock
     const buffer = audioCtx.createBuffer(1, 1, 22050);
     const source = audioCtx.createBufferSource();
     source.buffer = buffer;
@@ -33,7 +33,6 @@ function getAudioCtx(): AudioContext | null {
 export function useBrowserNotification() {
   const permissionRequested = useRef(false);
 
-  // Auto-request permission on mount
   useEffect(() => {
     if (!('Notification' in window)) return;
     if (Notification.permission === 'default' && !permissionRequested.current) {
@@ -42,7 +41,6 @@ export function useBrowserNotification() {
     }
   }, []);
 
-  // Listen for first user interaction to unlock audio
   useEffect(() => {
     function onInteract() {
       unlockAudio();
@@ -62,45 +60,32 @@ export function useBrowserNotification() {
       const ctx = getAudioCtx();
       if (!ctx) return;
 
-      const now = ctx.currentTime;
-
-      // Beep 1 - 880Hz
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(880, now);
-      gain1.gain.setValueAtTime(1, now);
-      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-      osc1.start(now);
-      osc1.stop(now + 0.3);
-
-      // Beep 2 - 1100Hz (delayed)
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1100, now + 0.15);
-      gain2.gain.setValueAtTime(0, now);
-      gain2.gain.setValueAtTime(1, now + 0.15);
-      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
-      osc2.start(now + 0.15);
-      osc2.stop(now + 0.45);
-
-      // Beep 3 - 1320Hz (louder)
-      const osc3 = ctx.createOscillator();
-      const gain3 = ctx.createGain();
-      osc3.connect(gain3);
-      gain3.connect(ctx.destination);
-      osc3.type = 'sine';
-      osc3.frequency.setValueAtTime(1320, now + 0.3);
-      gain3.gain.setValueAtTime(0, now);
-      gain3.gain.setValueAtTime(1, now + 0.3);
-      gain3.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-      osc3.start(now + 0.3);
-      osc3.stop(now + 0.6);
+      fetch(NOTIF_URL)
+        .then(res => res.arrayBuffer())
+        .then(data => ctx.decodeAudioData(data))
+        .then(buffer => {
+          const source = ctx.createBufferSource();
+          const gain = ctx.createGain();
+          source.buffer = buffer;
+          gain.gain.setValueAtTime(1, ctx.currentTime); // MAX volume
+          source.connect(gain);
+          gain.connect(ctx.destination);
+          source.start(0);
+        })
+        .catch(() => {
+          // Fallback: oscillator beep
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1100, now);
+          gain.gain.setValueAtTime(1, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        });
     } catch { /* ignore */ }
   }, []);
 
