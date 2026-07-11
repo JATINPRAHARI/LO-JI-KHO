@@ -1,9 +1,8 @@
 import { useCallback, useRef, useEffect } from 'react';
 
-// Singleton AudioContext that gets "unlocked" on first user interaction
 let audioCtx: AudioContext | null = null;
 let audioUnlocked = false;
-const NOTIF_URL = '/mixkit-bell-notification-933.wav';
+const NOTIF_URL = '/mixkit-digital-clock-digital-alarm-buzzer-992.wav';
 
 function unlockAudio() {
   if (audioUnlocked) return;
@@ -30,6 +29,26 @@ function getAudioCtx(): AudioContext | null {
   return audioCtx;
 }
 
+// Preload the WAV buffer once
+let cachedBuffer: AudioBuffer | null = null;
+let bufferLoading = false;
+
+function preloadBuffer() {
+  if (cachedBuffer || bufferLoading) return;
+  bufferLoading = true;
+  fetch(NOTIF_URL)
+    .then(res => res.arrayBuffer())
+    .then(data => {
+      const ctx = getAudioCtx();
+      if (ctx) {
+        return ctx.decodeAudioData(data);
+      }
+      return null;
+    })
+    .then(buf => { cachedBuffer = buf; })
+    .catch(() => { /* ignore */ });
+}
+
 export function useBrowserNotification() {
   const permissionRequested = useRef(false);
 
@@ -39,11 +58,15 @@ export function useBrowserNotification() {
       permissionRequested.current = true;
       Notification.requestPermission().catch(() => {});
     }
+    // Preload the notification sound
+    preloadBuffer();
   }, []);
 
+  // Unlock audio on first interaction
   useEffect(() => {
     function onInteract() {
       unlockAudio();
+      preloadBuffer();
       document.removeEventListener('click', onInteract);
       document.removeEventListener('keydown', onInteract);
     }
@@ -60,32 +83,47 @@ export function useBrowserNotification() {
       const ctx = getAudioCtx();
       if (!ctx) return;
 
-      fetch(NOTIF_URL)
-        .then(res => res.arrayBuffer())
-        .then(data => ctx.decodeAudioData(data))
-        .then(buffer => {
+      const playOnce = (buffer: AudioBuffer, delay: number, repeatCount: number) => {
+        for (let i = 0; i < repeatCount; i++) {
           const source = ctx.createBufferSource();
           const gain = ctx.createGain();
           source.buffer = buffer;
-          gain.gain.setValueAtTime(1, ctx.currentTime); // MAX volume
+          gain.gain.setValueAtTime(1, ctx.currentTime + delay + i * 0.8);
           source.connect(gain);
           gain.connect(ctx.destination);
-          source.start(0);
-        })
-        .catch(() => {
-          // Fallback: oscillator beep
-          const now = ctx.currentTime;
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(1100, now);
-          gain.gain.setValueAtTime(1, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-          osc.start(now);
-          osc.stop(now + 0.5);
-        });
+          source.start(ctx.currentTime + delay + i * 0.8);
+        }
+      };
+
+      if (cachedBuffer) {
+        // Play 3 times with 0.8s gaps
+        playOnce(cachedBuffer, 0, 3);
+      } else {
+        // Not cached yet - load and play
+        fetch(NOTIF_URL)
+          .then(res => res.arrayBuffer())
+          .then(data => ctx.decodeAudioData(data))
+          .then(buffer => {
+            cachedBuffer = buffer;
+            playOnce(buffer, 0, 3);
+          })
+          .catch(() => {
+            // Fallback oscillator
+            const now = ctx.currentTime;
+            for (let i = 0; i < 3; i++) {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(1100, now + i * 0.3);
+              gain.gain.setValueAtTime(1, now + i * 0.3);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.3 + 0.25);
+              osc.start(now + i * 0.3);
+              osc.stop(now + i * 0.3 + 0.25);
+            }
+          });
+      }
     } catch { /* ignore */ }
   }, []);
 
