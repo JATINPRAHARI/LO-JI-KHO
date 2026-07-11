@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell, X, CheckCheck, Package, ChefHat, Bike, Home, AlertCircle, Info, Tag, ShoppingBag } from 'lucide-react';
-import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import * as notifService from '../../services/notifications';
 import type { Notification, NotificationType } from '../../types/database';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { formatDistanceToNow } from '../../utils/formatters';
 
 const typeIcons: Record<NotificationType, React.ReactNode> = {
@@ -22,39 +20,10 @@ const typeIcons: Record<NotificationType, React.ReactNode> = {
 };
 
 export function AdminNotificationBell() {
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Fetch all notifications (admin sees everything)
-    notifService.getAllNotifications().then(data => {
-      setNotifications(data as Notification[]);
-      setUnreadCount(data.filter(n => !n.is_read).length);
-    });
-
-    // Subscribe to all new notifications (no user filter)
-    const channel = supabase
-      .channel('admin-notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-      }, payload => {
-        setNotifications(prev => [payload.new as Notification, ...prev]);
-        setUnreadCount(c => c + 1);
-        // Show toast for new order/payment notifications
-        const type = (payload.new as Notification).type;
-        if (type === 'order_received' || type === 'payment_pending') {
-          toast.info(`New order: ${(payload.new as Notification).title}`);
-        }
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -64,17 +33,9 @@ export function AdminNotificationBell() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  async function handleMarkAllRead() {
-    await notifService.markAllAsRead();
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    setUnreadCount(0);
-  }
-
   async function handleClick(n: Notification) {
     if (!n.is_read) {
-      await notifService.markAsRead(n.id);
-      setNotifications(prev => prev.map(p => p.id === n.id ? { ...p, is_read: true } : p));
-      setUnreadCount(c => Math.max(0, c - 1));
+      await markAsRead(n.id);
     }
     if (n.order_id) {
       setIsOpen(false);
@@ -114,7 +75,7 @@ export function AdminNotificationBell() {
                 Order Notifications
               </h3>
               {unreadCount > 0 && (
-                <button onClick={handleMarkAllRead} className="text-xs text-brand-primary font-semibold hover:underline">
+                <button onClick={markAllAsRead} className="text-xs text-brand-primary font-semibold hover:underline">
                   Mark all read
                 </button>
               )}

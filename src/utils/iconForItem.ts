@@ -28,6 +28,9 @@ const categoryMap: Record<string, IconConfig> = {
   sweets: { icon: CakeSlice, gradient: 'bg-gradient-to-br from-pink-400 to-rose-300' },
   combo: { icon: Package, gradient: 'bg-gradient-to-br from-indigo-400 to-violet-300' },
   combos: { icon: Package, gradient: 'bg-gradient-to-br from-indigo-400 to-violet-300' },
+  'protein-ladoo': { icon: CakeSlice, gradient: 'bg-gradient-to-br from-emerald-400 to-teal-300' },
+  protein: { icon: CakeSlice, gradient: 'bg-gradient-to-br from-emerald-400 to-teal-300' },
+  ladoo: { icon: CakeSlice, gradient: 'bg-gradient-to-br from-emerald-400 to-teal-300' },
 };
 
 const nameHints: { pattern: RegExp; config: IconConfig }[] = [
@@ -36,6 +39,7 @@ const nameHints: { pattern: RegExp; config: IconConfig }[] = [
   { pattern: /pasta|penne|fusilli|spaghetti|macaroni/i, config: categoryMap.pasta },
   { pattern: /coffee|shake|smoothie|juice|drink|beverage|cold/i, config: categoryMap.coffee },
   { pattern: /cake|brownie|dessert|sweet|pastry/i, config: categoryMap.dessert },
+  { pattern: /ladoo|laddoo|protein/i, config: categoryMap['protein-ladoo'] },
   { pattern: /combo|meal|platter|box/i, config: categoryMap.combo },
 ];
 

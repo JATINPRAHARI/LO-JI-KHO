@@ -7,10 +7,12 @@ function getMinutes(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
 }
 
-export function isRestaurantOpen(date?: Date): boolean {
-  const now = date ?? new Date();
-  const mins = getMinutes(now);
-  return (mins >= LUNCH_START && mins < LUNCH_END) || (mins >= DINNER_START && mins < DINNER_END);
+export function isRestaurantOpen(_date?: Date): boolean {
+  // TEMPORARILY always open - remove this override to restore real hours
+  return true;
+  // const now = date ?? new Date();
+  // const mins = getMinutes(now);
+  // return (mins >= LUNCH_START && mins < LUNCH_END) || (mins >= DINNER_START && mins < DINNER_END);
 }
 
 export function getOrderingTimings() {

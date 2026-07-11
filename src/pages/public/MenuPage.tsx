@@ -24,6 +24,7 @@ const categoryMeta: Record<string, { emoji: string; image: string; note?: string
   pasta: { emoji: '🍝', image: 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=600', note: 'Only Sooji Pasta' },
   'cold-coffee': { emoji: '🧋', image: 'https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?auto=compress&cs=tinysrgb&w=600' },
   specials: { emoji: '🌟', image: 'https://images.pexels.com/photos/5946507/pexels-photo-5946507.jpeg?auto=compress&cs=tinysrgb&w=600' },
+  'protein-ladoo': { emoji: '💪', image: 'https://images.pexels.com/photos/5946507/pexels-photo-5946507.jpeg?auto=compress&cs=tinysrgb&w=600', note: '250GM' },
 };
 
 const itemAnim = {

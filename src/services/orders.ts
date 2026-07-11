@@ -27,13 +27,13 @@ export interface CreateOrderPayload {
 }
 
 export async function createOrder(payload: CreateOrderPayload, initialStatus: OrderStatus = 'payment_pending') {
-  // Server-side ordering hours validation
-  const now = new Date();
-  const mins = now.getHours() * 60 + now.getMinutes();
-  const withinHours = (mins >= 11 * 60 && mins < 15 * 60) || (mins >= 19 * 60 && mins < 22 * 60);
-  if (!withinHours) {
-    throw new Error('Sorry, ordering is currently unavailable. Please order during our business hours.');
-  }
+  // TEMPORARILY DISABLED - ordering hours validation removed
+  // const now = new Date();
+  // const mins = now.getHours() * 60 + now.getMinutes();
+  // const withinHours = (mins >= 11 * 60 && mins < 15 * 60) || (mins >= 19 * 60 && mins < 22 * 60);
+  // if (!withinHours) {
+  //   throw new Error('Sorry, ordering is currently unavailable. Please order during our business hours.');
+  // }
 
   const { items, ...orderData } = payload;
 
@@ -219,7 +219,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
 export async function verifyPayment(orderId: string) {
   const { data: order, error: orderFetchError } = await supabase
     .from('orders')
-    .select('order_number, total_amount')
+    .select('*, payments(*)')
     .eq('id', orderId)
     .single();
   if (orderFetchError) throw orderFetchError;
@@ -229,6 +229,17 @@ export async function verifyPayment(orderId: string) {
     .update({ status: 'verified', verified_at: new Date().toISOString() })
     .eq('order_id', orderId);
   if (paymentError) throw paymentError;
+
+  // Notify user about successful payment
+  if (order.user_id) {
+    await supabase.from('notifications').insert({
+      user_id: order.user_id,
+      title: 'Payment Successful',
+      message: `Your payment of ₹${order.total_amount} for order ${order.order_number} has been verified successfully!`,
+      type: 'accepted',
+      order_id: orderId,
+    });
+  }
 
   await createAdminNotification(
     'Payment Verified',

@@ -2,10 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { Bell, X, CheckCheck, Package, ChefHat, Bike, Home, AlertCircle, Info, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import * as notifService from '../../services/notifications';
 import type { Notification, NotificationType } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { formatDistanceToNow } from '../../utils/formatters';
 
 const typeIcons: Record<NotificationType, React.ReactNode> = {
@@ -23,35 +22,10 @@ const typeIcons: Record<NotificationType, React.ReactNode> = {
 
 export function NotificationBell() {
   const { user } = useAuth();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!user) return;
-
-    notifService.getNotifications(user.id).then(data => {
-      setNotifications(data as Notification[]);
-      setUnreadCount(data.filter(n => !n.is_read).length);
-    });
-
-    const channel = supabase
-      .channel(`notifications:${user.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`,
-      }, payload => {
-        setNotifications(prev => [payload.new as Notification, ...prev]);
-        setUnreadCount(c => c + 1);
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [user]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -61,17 +35,9 @@ export function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  async function handleMarkAllRead() {
-    await notifService.markAllAsRead();
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    setUnreadCount(0);
-  }
-
   async function handleClick(n: Notification) {
     if (!n.is_read) {
-      await notifService.markAsRead(n.id);
-      setNotifications(prev => prev.map(p => p.id === n.id ? { ...p, is_read: true } : p));
-      setUnreadCount(c => Math.max(0, c - 1));
+      await markAsRead(n.id);
     }
     if (n.order_id) {
       setIsOpen(false);
@@ -110,7 +76,7 @@ export function NotificationBell() {
             <div className="flex items-center justify-between p-4 border-b border-stone-100 dark:border-stone-800">
               <h3 className="font-semibold text-stone-900 dark:text-stone-100 text-sm">Notifications</h3>
               {unreadCount > 0 && (
-                <button onClick={handleMarkAllRead} className="text-xs text-amber-600 font-semibold hover:underline">
+                <button onClick={markAllAsRead} className="text-xs text-amber-600 font-semibold hover:underline">
                   Mark all read
                 </button>
               )}
