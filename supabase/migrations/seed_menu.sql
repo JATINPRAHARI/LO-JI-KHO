@@ -45,3 +45,13 @@ INSERT INTO menu_items (category_id, name, description, price, image_url, is_veg
 SELECT cat.id, 'Thick & Creamy Cold Coffee', 'Rich, creamy & refreshing.', 69, 'https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?auto=compress&cs=tinysrgb&w=400', true, 1 FROM cat
 UNION ALL
 SELECT cat.id, 'Chocolate Cold Coffee', 'Smooth chocolatey goodness.', 79, 'https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?auto=compress&cs=tinysrgb&w=400', true, 2 FROM cat;
+
+-- Seed Specials category
+INSERT INTO categories (name, slug, image_url, sort_order) VALUES
+  ('Specials', 'specials', 'https://images.pexels.com/photos/5946507/pexels-photo-5946507.jpeg?auto=compress&cs=tinysrgb&w=600', 5)
+ON CONFLICT (slug) DO NOTHING;
+
+-- Seed Protein Lado
+WITH cat AS (SELECT id FROM categories WHERE slug = 'specials')
+INSERT INTO menu_items (category_id, name, description, price, weight, image_url, is_veg, is_best_seller, sort_order)
+SELECT cat.id, 'PROTEIN LADO', 'High-protein traditional Indian sweet. Packed with goodness.', 249, '250GM', 'https://images.pexels.com/photos/5946507/pexels-photo-5946507.jpeg?auto=compress&cs=tinysrgb&w=400', true, true, 1 FROM cat;

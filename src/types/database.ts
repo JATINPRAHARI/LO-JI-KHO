@@ -72,6 +72,7 @@ export interface Database {
           sort_order: number;
           rating: number;
           review_count: number;
+          weight: string;
           created_at: string;
           updated_at: string;
         };
@@ -89,6 +90,7 @@ export interface Database {
           sort_order?: number;
           rating?: number;
           review_count?: number;
+          weight?: string;
         };
         Update: {
           category_id?: string | null;
@@ -101,6 +103,7 @@ export interface Database {
           is_featured?: boolean;
           is_best_seller?: boolean;
           sort_order?: number;
+          weight?: string;
           updated_at?: string;
         };
       };

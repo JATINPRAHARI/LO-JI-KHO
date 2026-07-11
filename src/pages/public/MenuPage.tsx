@@ -23,6 +23,7 @@ const categoryMeta: Record<string, { emoji: string; image: string; note?: string
   sandwiches: { emoji: '🥪', image: 'https://images.pexels.com/photos/1600711/pexels-photo-1600711.jpeg?auto=compress&cs=tinysrgb&w=600', note: 'No Mayo' },
   pasta: { emoji: '🍝', image: 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=600', note: 'Only Sooji Pasta' },
   'cold-coffee': { emoji: '🧋', image: 'https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?auto=compress&cs=tinysrgb&w=600' },
+  specials: { emoji: '🌟', image: 'https://images.pexels.com/photos/5946507/pexels-photo-5946507.jpeg?auto=compress&cs=tinysrgb&w=600' },
 };
 
 const itemAnim = {
@@ -52,7 +53,14 @@ function MenuItemRow({ item, index, disabled }: { item: MenuItem; index: number;
           <h4 className="font-semibold text-stone-800 dark:text-stone-200 text-sm leading-tight">{item.name}</h4>
           {item.is_veg && <Leaf size={11} className="text-green-500 shrink-0" />}
         </div>
-        <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 ml-7">{item.description}</p>
+        <div className="flex items-center gap-2 ml-7">
+          <p className="text-xs text-stone-500 dark:text-stone-400">{item.description}</p>
+          {item.weight && (
+            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-700 shrink-0">
+              {item.weight}
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <span className="font-bold text-amber-700 dark:text-amber-400 text-sm">₹{item.price}</span>

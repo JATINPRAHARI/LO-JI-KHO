@@ -106,6 +106,11 @@ export function MenuItemCard({ item, isFavorite = false, onFavoriteChange }: Men
             {item.description}
           </p>
         )}
+        {item.weight && (
+          <span className="inline-block text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-700 mb-3">
+            {item.weight}
+          </span>
+        )}
 
         <div className="flex items-center gap-1 mb-3">
           <Star size={11} className="text-brand-accent fill-brand-accent" />
