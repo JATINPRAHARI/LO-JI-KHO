@@ -96,20 +96,9 @@ function MenuItemRow({ item, index, disabled }: { item: MenuItem; index: number;
 
 export default function MenuPage() {
   const [activeCatSlug, setActiveCatSlug] = useState<string>('maggi');
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen] = useState(true); // TEMPORARILY always open
   const { totalItems, subtotal } = useCart();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    function check() {
-      const now = new Date();
-      const mins = now.getHours() * 60 + now.getMinutes();
-      setIsOpen((mins >= 11 * 60 && mins < 15 * 60) || (mins >= 19 * 60 && mins < 22 * 60));
-    }
-    check();
-    const id = setInterval(check, 60000);
-    return () => clearInterval(id);
-  }, []);
 
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: getCategories });
   const { data: allItems = [] } = useQuery({

@@ -15,18 +15,7 @@ import { isWithinDeliveryRadius, getDeliveryInfoMessage } from '../../utils/deli
 import type { MenuItem } from '../../types/database';
 
 function HeroSection() {
-  const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    function check() {
-      const now = new Date();
-      const mins = now.getHours() * 60 + now.getMinutes();
-      setIsOpen((mins >= 11 * 60 && mins < 15 * 60) || (mins >= 19 * 60 && mins < 22 * 60));
-    }
-    check();
-    const id = setInterval(check, 60000);
-    return () => clearInterval(id);
-  }, []);
+  const [isOpen] = useState(true); // TEMPORARILY always open
 
   return (
     <section className="relative overflow-hidden">
