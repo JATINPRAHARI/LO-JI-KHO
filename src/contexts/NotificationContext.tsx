@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import * as notifService from '../services/notifications';
 import type { Notification } from '../types/database';
@@ -18,7 +19,7 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user, isAdmin } = useAuth();
-  const { showNotification } = useBrowserNotification();
+  const { showBrowserNotification, playSound } = useBrowserNotification();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -45,13 +46,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     refreshNotifications();
 
     const channelName = isAdmin ? 'admin-notifications-global' : `notifications:${user.id}`;
-    const filter = isAdmin
+    const channelFilter = isAdmin
       ? { event: 'INSERT' as const, schema: 'public' as const, table: 'notifications' as const }
       : { event: 'INSERT' as const, schema: 'public' as const, table: 'notifications' as const, filter: `user_id=eq.${user.id}` };
 
     const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', filter, (payload) => {
+      .on('postgres_changes', channelFilter, (payload) => {
         const newNotif = payload.new as Notification;
         setNotifications(prev => {
           if (prev.some(n => n.id === newNotif.id)) return prev;
@@ -59,14 +60,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         });
         setUnreadCount(c => c + 1);
 
-        showNotification(newNotif.title, {
-          body: newNotif.message,
+        // Play MAX volume sound
+        playSound();
+
+        // Show browser notification
+        showBrowserNotification(newNotif.title, newNotif.message);
+
+        // Show sonner toast as well
+        toast(newNotif.title, {
+          description: newNotif.message,
+          duration: 10000,
         });
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, isAdmin, refreshNotifications, showNotification]);
+  }, [user, isAdmin, refreshNotifications, showBrowserNotification, playSound]);
 
   const markAsRead = useCallback(async (id: string) => {
     await notifService.markAsRead(id);
