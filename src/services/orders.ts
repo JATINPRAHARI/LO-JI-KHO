@@ -27,13 +27,13 @@ export interface CreateOrderPayload {
 }
 
 export async function createOrder(payload: CreateOrderPayload, initialStatus: OrderStatus = 'payment_pending') {
-  // TEMPORARILY DISABLED - ordering hours validation removed
-  // const now = new Date();
-  // const mins = now.getHours() * 60 + now.getMinutes();
-  // const withinHours = (mins >= 11 * 60 && mins < 15 * 60) || (mins >= 19 * 60 && mins < 22 * 60);
-  // if (!withinHours) {
-  //   throw new Error('Sorry, ordering is currently unavailable. Please order during our business hours.');
-  // }
+  // Server-side ordering hours validation
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const withinHours = (mins >= 11 * 60 && mins < 15 * 60) || (mins >= 19 * 60 && mins < 22 * 60);
+  if (!withinHours) {
+    throw new Error('Sorry, ordering is currently unavailable. Please order during our business hours.');
+  }
 
   const { items, ...orderData } = payload;
 

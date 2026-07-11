@@ -99,14 +99,14 @@ export default function CheckoutPage() {
 
   async function onSubmit(data: FormData) {
     try {
-      // TEMPORARILY DISABLED - ordering hours validation removed
-      // const now = new Date();
-      // const mins = now.getHours() * 60 + now.getMinutes();
-      // const withinHours = (mins >= 11 * 60 && mins < 15 * 60) || (mins >= 19 * 60 && mins < 22 * 60);
-      // if (!withinHours) {
-      //   toast.error('Sorry, ordering is currently unavailable. Please order during our business hours.');
-      //   return;
-      // }
+      // Validate ordering hours
+      const now = new Date();
+      const mins = now.getHours() * 60 + now.getMinutes();
+      const withinHours = (mins >= 11 * 60 && mins < 15 * 60) || (mins >= 19 * 60 && mins < 22 * 60);
+      if (!withinHours) {
+        toast.error('Sorry, ordering is currently unavailable. Please order during our business hours.');
+        return;
+      }
 
       // Validate delivery location using shared utility
       let delivery_distance = 0;

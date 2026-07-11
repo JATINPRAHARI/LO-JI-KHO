@@ -19,7 +19,7 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user, isAdmin } = useAuth();
-  const { showBrowserNotification, playSound } = useBrowserNotification();
+  const { showBrowserNotification, playAlarmSound, playBellSound } = useBrowserNotification();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -60,8 +60,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         });
         setUnreadCount(c => c + 1);
 
-        // Play MAX volume sound
-        playSound();
+        // Play sound - alarm for admin, bell for customer
+        if (isAdmin) { playAlarmSound(); } else { playBellSound(); }
 
         // Show browser notification
         showBrowserNotification(newNotif.title, newNotif.message);
@@ -75,7 +75,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, isAdmin, refreshNotifications, showBrowserNotification, playSound]);
+  }, [user, isAdmin, refreshNotifications, showBrowserNotification, playAlarmSound, playBellSound]);
 
   const markAsRead = useCallback(async (id: string) => {
     await notifService.markAsRead(id);

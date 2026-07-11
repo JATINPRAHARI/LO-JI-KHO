@@ -2,7 +2,8 @@ import { useCallback, useRef, useEffect } from 'react';
 
 let audioCtx: AudioContext | null = null;
 let audioUnlocked = false;
-const NOTIF_URL = '/mixkit-digital-clock-digital-alarm-buzzer-992.wav';
+const ALARM_URL = '/mixkit-digital-clock-digital-alarm-buzzer-992.wav';
+const BELL_URL = '/mixkit-bell-notification-933.wav';
 
 function unlockAudio() {
   if (audioUnlocked) return;
@@ -29,24 +30,49 @@ function getAudioCtx(): AudioContext | null {
   return audioCtx;
 }
 
-// Preload the WAV buffer once
-let cachedBuffer: AudioBuffer | null = null;
-let bufferLoading = false;
+// Preload buffers once
+let alarmBuffer: AudioBuffer | null = null;
+let bellBuffer: AudioBuffer | null = null;
 
-function preloadBuffer() {
-  if (cachedBuffer || bufferLoading) return;
-  bufferLoading = true;
-  fetch(NOTIF_URL)
+function preloadBuffer(url: string): Promise<AudioBuffer | null> {
+  const ctx = getAudioCtx();
+  if (!ctx) return Promise.resolve(null);
+  return fetch(url)
     .then(res => res.arrayBuffer())
-    .then(data => {
-      const ctx = getAudioCtx();
-      if (ctx) {
-        return ctx.decodeAudioData(data);
-      }
-      return null;
-    })
-    .then(buf => { cachedBuffer = buf; })
-    .catch(() => { /* ignore */ });
+    .then(data => ctx.decodeAudioData(data))
+    .catch(() => null);
+}
+
+function playBuffer(buffer: AudioBuffer, repeatCount: number, gap: number) {
+  const ctx = getAudioCtx();
+  if (!ctx || !buffer) return;
+  for (let i = 0; i < repeatCount; i++) {
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    source.buffer = buffer;
+    gain.gain.setValueAtTime(1, ctx.currentTime + i * gap);
+    source.connect(gain);
+    gain.connect(ctx.destination);
+    source.start(ctx.currentTime + i * gap);
+  }
+}
+
+function fallbackBeep() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  for (let i = 0; i < 3; i++) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1100, now + i * 0.3);
+    gain.gain.setValueAtTime(1, now + i * 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.3 + 0.25);
+    osc.start(now + i * 0.3);
+    osc.stop(now + i * 0.3 + 0.25);
+  }
 }
 
 export function useBrowserNotification() {
@@ -58,15 +84,16 @@ export function useBrowserNotification() {
       permissionRequested.current = true;
       Notification.requestPermission().catch(() => {});
     }
-    // Preload the notification sound
-    preloadBuffer();
+    // Preload both sounds
+    preloadBuffer(ALARM_URL).then(buf => { if (buf) alarmBuffer = buf; });
+    preloadBuffer(BELL_URL).then(buf => { if (buf) bellBuffer = buf; });
   }, []);
 
-  // Unlock audio on first interaction
   useEffect(() => {
     function onInteract() {
       unlockAudio();
-      preloadBuffer();
+      preloadBuffer(ALARM_URL).then(buf => { if (buf) alarmBuffer = buf; });
+      preloadBuffer(BELL_URL).then(buf => { if (buf) bellBuffer = buf; });
       document.removeEventListener('click', onInteract);
       document.removeEventListener('keydown', onInteract);
     }
@@ -78,53 +105,27 @@ export function useBrowserNotification() {
     };
   }, []);
 
-  const playSound = useCallback(() => {
-    try {
-      const ctx = getAudioCtx();
-      if (!ctx) return;
+  // Admin: loud alarm buzzer x3
+  const playAlarmSound = useCallback(() => {
+    if (alarmBuffer) {
+      playBuffer(alarmBuffer, 3, 0.8);
+    } else {
+      preloadBuffer(ALARM_URL).then(buf => {
+        if (buf) { alarmBuffer = buf; playBuffer(buf, 3, 0.8); }
+        else fallbackBeep();
+      });
+    }
+  }, []);
 
-      const playOnce = (buffer: AudioBuffer, delay: number, repeatCount: number) => {
-        for (let i = 0; i < repeatCount; i++) {
-          const source = ctx.createBufferSource();
-          const gain = ctx.createGain();
-          source.buffer = buffer;
-          gain.gain.setValueAtTime(1, ctx.currentTime + delay + i * 0.8);
-          source.connect(gain);
-          gain.connect(ctx.destination);
-          source.start(ctx.currentTime + delay + i * 0.8);
-        }
-      };
-
-      if (cachedBuffer) {
-        // Play 3 times with 0.8s gaps
-        playOnce(cachedBuffer, 0, 3);
-      } else {
-        // Not cached yet - load and play
-        fetch(NOTIF_URL)
-          .then(res => res.arrayBuffer())
-          .then(data => ctx.decodeAudioData(data))
-          .then(buffer => {
-            cachedBuffer = buffer;
-            playOnce(buffer, 0, 3);
-          })
-          .catch(() => {
-            // Fallback oscillator
-            const now = ctx.currentTime;
-            for (let i = 0; i < 3; i++) {
-              const osc = ctx.createOscillator();
-              const gain = ctx.createGain();
-              osc.connect(gain);
-              gain.connect(ctx.destination);
-              osc.type = 'sine';
-              osc.frequency.setValueAtTime(1100, now + i * 0.3);
-              gain.gain.setValueAtTime(1, now + i * 0.3);
-              gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.3 + 0.25);
-              osc.start(now + i * 0.3);
-              osc.stop(now + i * 0.3 + 0.25);
-            }
-          });
-      }
-    } catch { /* ignore */ }
+  // Customer: gentle bell x1
+  const playBellSound = useCallback(() => {
+    if (bellBuffer) {
+      playBuffer(bellBuffer, 1, 0);
+    } else {
+      preloadBuffer(BELL_URL).then(buf => {
+        if (buf) { bellBuffer = buf; playBuffer(buf, 1, 0); }
+      });
+    }
   }, []);
 
   const showBrowserNotification = useCallback((title: string, body?: string) => {
@@ -142,11 +143,13 @@ export function useBrowserNotification() {
     }
   }, []);
 
-  return { showBrowserNotification, playSound, requestPermission: useCallback(async () => {
+  const requestPermission = useCallback(async () => {
     if (!('Notification' in window)) return false;
     if (Notification.permission === 'granted') return true;
     if (Notification.permission === 'denied') return false;
     const result = await Notification.requestPermission();
     return result === 'granted';
-  }, []) };
+  }, []);
+
+  return { showBrowserNotification, playAlarmSound, playBellSound, requestPermission };
 }
